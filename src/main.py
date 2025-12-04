@@ -33,39 +33,98 @@ class CLI:
                 print(f"\n📍 Starting {name.upper()} scraper...")
                 try:
                     products = await scraper.scrape()
-                    print(f"✅ Exported to: {output_path}")
-        except Exception as e:
-        print(f"❌ Export failed: {e}")
-
-
-def serve(self, host: str = "127.0.0.1", port: int = 8000):
-    """Start FastAPI server"""
-    print(f"🚀 Starting API server on {host}:{port}")
-    print(f"📖 Docs available at: http://{host}:{port}/docs")
-
-    app = create_app(self.db_manager)
-    uvicorn.run(app, host=host, port=port)
-
-
-def db_command(self, action: str):
-    """Database management commands"""
-    if action == 'init':
-        print("🗄️  Initializing database...")
-        self.db_manager.init_db()
-        print("✅ Database initialized")
-    elif action == 'migrate':
-        print("🔄 Running migrations...")
-        self.db_manager.migrate()
-        print("✅ Migration complete")
-    elif action == 'clean':
-        response = input("⚠️  Delete all data? (yes/no): ")
-        if response.lower() == 'yes':
-            self.db_manager.clean()
-            print("✅ Database cleaned")
+                    print(f"✅ {name}: {len(products)} products scraped")
+                except Exception as e:
+                    print(f"❌ {name} failed: {e}")
         else:
-            print("❌ Cancelled")
-    else:
-        print(f"❌ Unknown action: {action}")
+            if store not in self.scrapers:
+                print(f"❌ Unknown store: {store}")
+                print(f"Available: {', '.join(self.scrapers.keys())}")
+                return
+
+            print(f"🛒 Scraping {store.upper()}...")
+            scraper = self.scrapers[store]
+            try:
+                products = await scraper.scrape()
+                print(f"✅ Scraped {len(products)} products from {store}")
+            except Exception as e:
+                print(f"❌ Scraping failed: {e}")
+
+    def ocr(self, input_path: str, batch: bool = False):
+        """Process Kazyon flyers with OCR"""
+        processor = OCRProcessor()
+
+        if batch:
+            print(f"📸 Batch processing flyers in: {input_path}")
+            flyer_dir = Path(input_path)
+            if not flyer_dir.exists():
+                print(f"❌ Directory not found: {input_path}")
+                return
+
+            image_files = list(flyer_dir.glob("*.jpg")) + list(flyer_dir.glob("*.png"))
+            print(f"Found {len(image_files)} images")
+
+            for img_path in image_files:
+                print(f"\n🔍 Processing: {img_path.name}")
+                try:
+                    products = processor.process_flyer(str(img_path))
+                    print(f"✅ Extracted {len(products)} products")
+                except Exception as e:
+                    print(f"❌ Failed: {e}")
+        else:
+            print(f"📸 Processing single flyer: {input_path}")
+            try:
+                products = processor.process_flyer(input_path)
+                print(f"✅ Extracted {len(products)} products")
+                print(f"💾 Saved to database")
+            except Exception as e:
+                print(f"❌ OCR processing failed: {e}")
+
+    def export(self, format: str = 'json', store: Optional[str] = None):
+        """Export data to JSON or CSV"""
+        print(f"📦 Exporting data to {format.upper()}...")
+
+        if format == 'json':
+            exporter = JSONExporter(self.db_manager)
+        elif format == 'csv':
+            exporter = CSVExporter(self.db_manager)
+        else:
+            print(f"❌ Unknown format: {format}")
+            return
+
+        try:
+            output_path = exporter.export(store_filter=store)
+            print(f"✅ Exported to: {output_path}")
+        except Exception as e:
+            print(f"❌ Export failed: {e}")
+
+    def serve(self, host: str = "127.0.0.1", port: int = 8000):
+        """Start FastAPI server"""
+        print(f"🚀 Starting API server on {host}:{port}")
+        print(f"📖 Docs available at: http://{host}:{port}/docs")
+
+        app = create_app(self.db_manager)
+        uvicorn.run(app, host=host, port=port)
+
+    def db_command(self, action: str):
+        """Database management commands"""
+        if action == 'init':
+            print("🗄️  Initializing database...")
+            self.db_manager.init_db()
+            print("✅ Database initialized")
+        elif action == 'migrate':
+            print("🔄 Running migrations...")
+            self.db_manager.migrate()
+            print("✅ Migration complete")
+        elif action == 'clean':
+            response = input("⚠️  Delete all data? (yes/no): ")
+            if response.lower() == 'yes':
+                self.db_manager.clean()
+                print("✅ Database cleaned")
+            else:
+                print("❌ Cancelled")
+        else:
+            print(f"❌ Unknown action: {action}")
 
 
 def main():
@@ -140,70 +199,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    {name}: {len(products)}
-    products
-    scraped
-    ")
-    except Exception as e:
-    print(f"❌ {name} failed: {e}")
-else:
-    if store not in self.scrapers:
-        print(f"❌ Unknown store: {store}")
-        print(f"Available: {', '.join(self.scrapers.keys())}")
-        return
-
-print(f"🛒 Scraping {store.upper()}...")
-scraper = self.scrapers[store]
-try:
-    products = await scraper.scrape()
-    print(f"✅ Scraped {len(products)} products from {store}")
-except Exception as e:
-    print(f"❌ Scraping failed: {e}")
-
-
-def ocr(self, input_path: str, batch: bool = False):
-    """Process Kazyon flyers with OCR"""
-    processor = OCRProcessor()
-
-    if batch:
-        print(f"📸 Batch processing flyers in: {input_path}")
-        flyer_dir = Path(input_path)
-        if not flyer_dir.exists():
-            print(f"❌ Directory not found: {input_path}")
-            return
-
-        image_files = list(flyer_dir.glob("*.jpg")) + list(flyer_dir.glob("*.png"))
-        print(f"Found {len(image_files)} images")
-
-        for img_path in image_files:
-            print(f"\n🔍 Processing: {img_path.name}")
-            try:
-                products = processor.process_flyer(str(img_path))
-                print(f"✅ Extracted {len(products)} products")
-            except Exception as e:
-                print(f"❌ Failed: {e}")
-    else:
-        print(f"📸 Processing single flyer: {input_path}")
-        try:
-            products = processor.process_flyer(input_path)
-            print(f"✅ Extracted {len(products)} products")
-            print(f"💾 Saved to database")
-        except Exception as e:
-            print(f"❌ OCR processing failed: {e}")
-
-
-def export(self, format: str = 'json', store: Optional[str] = None):
-    """Export data to JSON or CSV"""
-    print(f"📦 Exporting data to {format.upper()}...")
-
-    if format == 'json':
-        exporter = JSONExporter(self.db_manager)
-    elif format == 'csv':
-        exporter = CSVExporter(self.db_manager)
-    else:
-        print(f"❌ Unknown format: {format}")
-        return
-
-    try:
-        output_path = exporter.export(store_filter=store)
-        print(f"✅
