@@ -19,19 +19,18 @@ services:
     command: python -m src.main serve --host 0.0.0.0 --port 8000
     restart: unless-stopped
 
-  # Uncomment when frontend is ready
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: data_scrapper_frontend
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - VITE_API_URL=http://localhost:8000
-  #   depends_on:
-  #     - backend
-  #   restart: unless-stopped
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: data_scrapper_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
 
 volumes:
   db_data:
