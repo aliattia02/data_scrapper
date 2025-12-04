@@ -1,0 +1,49 @@
+data_scrapper/
+├── .github/
+│   └── workflows/
+│       └── daily_scrape.yml
+├── src/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── config.py
+│   ├── scrapers/
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── carrefour.py
+│   │   └── metro.py
+│   ├── ocr/
+│   │   ├── __init__.py
+│   │   ├── processor.py
+│   │   └── kazyon_parser.py
+│   ├── database/
+│   │   ├── __init__.py
+│   │   ├── models.py
+│   │   └── manager.py
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── app.py
+│   │   └── routes.py
+│   ├── exporters/
+│   │   ├── __init__.py
+│   │   ├── json_exporter.py
+│   │   └── csv_exporter.py
+│   └── utils/
+│       ├── __init__.py
+│       ├── categories.py
+│       └── helpers.py
+├── data/
+│   ├── flyers/
+│   ├── exports/
+│   └── database/
+│       └── products.db
+├── tests/
+│   ├── __init__.py
+│   ├── test_scrapers.py
+│   ├── test_ocr.py
+│   └── test_api.py
+├── requirements.txt
+├── setup.py
+├── .env.example
+├── .gitignore
+├── README.md
+└── docker-compose.yml
