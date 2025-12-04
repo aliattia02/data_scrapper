@@ -9,6 +9,10 @@ from sqlalchemy.orm import Session
 
 from src.database.models import Product
 from src.database.manager import DatabaseManager
+from src.api.routes import (
+    stores_router, categories_router, products_router,
+    offers_router, catalogues_router, export_router, scraper_router
+)
 
 
 def create_app(db_manager: DatabaseManager) -> FastAPI:
@@ -20,7 +24,7 @@ def create_app(db_manager: DatabaseManager) -> FastAPI:
         version="1.0.0"
     )
 
-    # CORS for React Native mobile app
+    # CORS for React Native mobile app and admin dashboard
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],  # Configure for production
@@ -28,6 +32,15 @@ def create_app(db_manager: DatabaseManager) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    
+    # Include routers
+    app.include_router(stores_router)
+    app.include_router(categories_router)
+    app.include_router(products_router)
+    app.include_router(offers_router)
+    app.include_router(catalogues_router)
+    app.include_router(export_router)
+    app.include_router(scraper_router)
 
     def get_db():
         """Database session dependency"""
