@@ -2,7 +2,6 @@
 src/main.py - CLI Entry Point for Egyptian Grocery Scraper
 """
 import argparse
-import asyncio
 import sys
 from pathlib import Path
 from typing import Optional
@@ -25,14 +24,14 @@ class CLI:
             'metro': MetroScraper(self.db_manager)
         }
 
-    async def scrape(self, store: Optional[str] = None):
+    def scrape(self, store: Optional[str] = None):
         """Run scrapers for specified store or all stores"""
         if store == 'all' or store is None:
             print("🛒 Scraping all stores...")
             for name, scraper in self.scrapers.items():
                 print(f"\n📍 Starting {name.upper()} scraper...")
                 try:
-                    products = await scraper.scrape()
+                    products = scraper.scrape()
                     print(f"✅ {name}: {len(products)} products scraped")
                 except Exception as e:
                     print(f"❌ {name} failed: {e}")
@@ -45,7 +44,7 @@ class CLI:
             print(f"🛒 Scraping {store.upper()}...")
             scraper = self.scrapers[store]
             try:
-                products = await scraper.scrape()
+                products = scraper.scrape()
                 print(f"✅ Scraped {len(products)} products from {store}")
             except Exception as e:
                 print(f"❌ Scraping failed: {e}")
@@ -180,7 +179,7 @@ def main():
 
     try:
         if args.command == 'scrape':
-            asyncio.run(cli.scrape(args.store))
+            cli.scrape(args.store)
         elif args.command == 'ocr':
             cli.ocr(args.input, args.batch)
         elif args.command == 'export':

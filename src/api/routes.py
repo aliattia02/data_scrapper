@@ -262,12 +262,12 @@ async def run_scraper(request_data: dict, db: Session = Depends(get_db)):
         
         if store in ['all', 'carrefour']:
             scraper = CarrefourScraper(db_manager)
-            products = await scraper.scrape()
+            products = scraper.scrape()
             results.append({"store": "carrefour", "products": len(products)})
         
         if store in ['all', 'metro']:
             scraper = MetroScraper(db_manager)
-            products = await scraper.scrape()
+            products = scraper.scrape()
             results.append({"store": "metro", "products": len(products)})
         
         return {"message": "Scraping completed", "results": results}

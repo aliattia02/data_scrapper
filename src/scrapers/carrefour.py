@@ -36,7 +36,7 @@ class CarrefourScraper(BaseScraper):
         self.driver = webdriver.Chrome(options=options)
         self.driver.implicitly_wait(10)
     
-    async def scrape(self) -> List[Product]:
+    def scrape(self) -> List[Product]:
         """Main scraping method"""
         self.start_log()
         products = []

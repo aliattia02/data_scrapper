@@ -27,9 +27,11 @@ def normalize_arabic_text(text: str) -> str:
 
 def calculate_discount(original_price: float, sale_price: float) -> float:
     """Calculate discount percentage"""
-    if original_price > 0:
-        return round(((original_price - sale_price) / original_price) * 100, 2)
-    return 0.0
+    if original_price <= 0 or sale_price < 0:
+        return 0.0
+    if sale_price >= original_price:
+        return 0.0
+    return round(((original_price - sale_price) / original_price) * 100, 2)
 
 def clean_product_name(name: str) -> str:
     """Clean product name"""

@@ -20,7 +20,7 @@ class BaseScraper(ABC):
         self.errors = []
 
     @abstractmethod
-    async def scrape(self) -> List[Product]:
+    def scrape(self) -> List[Product]:
         """
         Main scraping method - must be implemented by subclasses
         Returns list of Product objects

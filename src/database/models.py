@@ -1,7 +1,7 @@
 """
 src/database/models.py - SQLAlchemy ORM Models
 """
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -20,8 +20,8 @@ class Store(Base):
     logo_url = Column(String(500))
     website = Column(String(500))
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     branches = relationship("Branch", back_populates="store", cascade="all, delete-orphan")
     catalogues = relationship("Catalogue", back_populates="store", cascade="all, delete-orphan")

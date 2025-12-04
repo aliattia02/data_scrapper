@@ -25,7 +25,7 @@ class MetroScraper(BaseScraper):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
     
-    async def scrape(self) -> List[Product]:
+    def scrape(self) -> List[Product]:
         """Main scraping method"""
         self.start_log()
         products = []
