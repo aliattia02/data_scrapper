@@ -1,0 +1,14 @@
+# Backend
+cd data_scrapper
+pip install -r requirements. txt
+python -m src.main db --init      # Initialize database
+python -m src.main db --seed      # Add Zagazig stores
+python -m src.main serve          # Start API on :8000
+
+# Frontend (separate terminal)
+cd frontend
+npm install
+npm run dev                        # Start on :5173
+
+# Or with Docker
+docker-compose up
