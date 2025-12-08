@@ -3,7 +3,15 @@ test_filloffer_improved.py - Test the improved scraper
 """
 from src.database.manager import DatabaseManager
 from src.scrapers.filloffer import FillofferScraperImproved
+from src.scrapers.url_scraper import URLScraper
 import sys
+
+
+# Test URLs for Kazyon Market
+TEST_URLS = [
+    "https://www.filloffer.com/markets/Kazyon-Market/new-offers-from-Kazyon-market-starting-from-4-december-8-december/pdf",
+    "https://www.filloffer.com/markets/Kazyon-Market/new-offers-from-Kazyon-market-Weekend-starting-from-2-december-to-8-december/pdf"
+]
 
 
 def check_dependencies():
@@ -125,6 +133,52 @@ def test_scraper():
         return 0
 
 
+def test_url_scraper():
+    """Test the URL-based scraper with specific Kazyon URLs"""
+    print("🚀 Testing URL Scraper with Kazyon Market URLs\n")
+
+    try:
+        db_manager = DatabaseManager()
+        scraper = URLScraper(db_manager)
+
+        total_products = 0
+
+        for i, url in enumerate(TEST_URLS, 1):
+            print(f"\n{'='*70}")
+            print(f"Testing URL {i}/{len(TEST_URLS)}")
+            print(f"{'='*70}")
+            print(f"URL: {url}\n")
+
+            try:
+                result = scraper.scrape_url(url, store='kazyon')
+                
+                print(f"\n✅ URL scraping completed!")
+                print(f"  Status: {result['status']}")
+                print(f"  Job ID: {result['job_id']}")
+                print(f"  Products found: {result['products_found']}")
+                print(f"  Pages processed: {result['pages_processed']}")
+                print(f"  PDF saved: {result['pdf_path']}")
+                
+                total_products += result['products_found']
+
+            except Exception as e:
+                print(f"\n❌ Error processing URL {i}: {e}")
+                import traceback
+                traceback.print_exc()
+
+        print(f"\n{'='*70}")
+        print(f"Total products from all URLs: {total_products}")
+        print(f"{'='*70}")
+
+        return total_products
+
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return 0
+
+
 def main():
     """Main test function"""
     print("=" * 70)
@@ -132,11 +186,18 @@ def main():
     print("=" * 70)
     print()
 
+    # Parse command line arguments
+    import argparse
+    parser = argparse.ArgumentParser(description='Test Filloffer scrapers')
+    parser.add_argument('--mode', choices=['url', 'general', 'both'], default='both',
+                       help='Test mode: url (specific URLs), general (scrape from main page), or both')
+    args = parser.parse_args()
+
     # Check dependencies first
     if not check_dependencies():
         print("\n❌ Please install missing dependencies before running the scraper.")
         print("\nRequired installations:")
-        print("  pip install pytesseract pillow pdf2image beautifulsoup4 lxml requests")
+        print("  pip install pytesseract pillow pdf2image beautifulsoup4 lxml requests img2pdf")
         print("\nAlso install:")
         print("  - Tesseract OCR: https://github.com/tesseract-ocr/tesseract")
         print("  - Poppler: https://github.com/oschwartz10612/poppler-windows/releases/")
@@ -152,21 +213,34 @@ def main():
 
     print()
 
-    # Run test
-    product_count = test_scraper()
+    # Run tests based on mode
+    product_count = 0
+    
+    if args.mode in ['url', 'both']:
+        print("\n" + "=" * 70)
+        print("TEST MODE: URL Scraper")
+        print("=" * 70)
+        product_count += test_url_scraper()
+    
+    if args.mode in ['general', 'both']:
+        print("\n" + "=" * 70)
+        print("TEST MODE: General Scraper")
+        print("=" * 70)
+        product_count += test_scraper()
 
     # Final summary
     print("\n" + "=" * 70)
     print("TEST SUMMARY")
     print("=" * 70)
-    print(f"Products scraped: {product_count}")
+    print(f"Total products scraped: {product_count}")
 
     if product_count > 0:
         print("Status: ✅ SUCCESS")
         print("\n📁 Check these folders:")
         print("  • data/pdfs/ - Downloaded PDF files")
-        print("  • data/flyers/ - Converted images")
-        print("  • data/flyers/*.txt - OCR text output")
+        print("  • data/catalogue_images/ - Downloaded images from URL scraper")
+        print("  • data/flyers/ - Converted images from general scraper")
+        print("  • data/*/*.txt - OCR text output")
     else:
         print("Status: ⚠️  NO PRODUCTS FOUND")
 

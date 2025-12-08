@@ -47,5 +47,14 @@ export const exportData = () => api.get('/api/v1/export/app')
 export const runScraper = (store: string) =>
   api.post('/api/v1/scraper/run', { store })
 
+export const scrapeFromUrl = (url: string, store?: string) =>
+  api.post('/api/v1/scraper/scrape-url', { url, store })
+
+export const getScrapeJob = (jobId: number) =>
+  api.get(`/api/v1/scraper/jobs/${jobId}`)
+
+export const listScrapeJobs = () =>
+  api.get('/api/v1/scraper/jobs')
+
 // Stats
 export const getStats = () => api.get<Stats>('/stats')

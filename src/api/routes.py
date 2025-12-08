@@ -253,16 +253,16 @@ async def run_scraper(request_data: dict, db: Session = Depends(get_db)):
     store = request_data.get('store', 'all')
 
     try:
-        from src.scrapers.filloffer import FillofferScraper
+        from src.scrapers.filloffer import FillofferScraperImproved
         from src.database.manager import DatabaseManager
 
         db_manager = DatabaseManager()
         results = []
 
         if store == 'all':
-            scraper = FillofferScraper(db_manager)
+            scraper = FillofferScraperImproved(db_manager)
         else:
-            scraper = FillofferScraper(db_manager, target_store=store)
+            scraper = FillofferScraperImproved(db_manager, target_store=store)
 
         products = scraper.scrape()
         results.append({"store": store, "products": len(products)})
@@ -273,3 +273,72 @@ async def run_scraper(request_data: dict, db: Session = Depends(get_db)):
         import traceback
         error_detail = traceback.format_exc()
         raise HTTPException(status_code=500, detail=f"Scraping failed: {str(e)}\n{error_detail}")
+
+
+@scraper_router.post("/scrape-url")
+async def scrape_from_url(request_data: dict, db: Session = Depends(get_db)):
+    """
+    Scrape a specific catalogue URL
+    
+    Request body:
+    {
+        "url": "https://www.filloffer.com/markets/Kazyon-Market/...",
+        "store": "kazyon"  # optional, auto-detect from URL
+    }
+    
+    Returns:
+    {
+        "status": "completed",
+        "job_id": 123,
+        "products_found": 45,
+        "pages_processed": 12,
+        "pdf_path": "/path/to/pdf"
+    }
+    """
+    url = request_data.get('url')
+    store = request_data.get('store')
+    
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+    
+    try:
+        from src.scrapers.url_scraper import URLScraper
+        from src.database.manager import DatabaseManager
+        
+        db_manager = DatabaseManager()
+        scraper = URLScraper(db_manager)
+        
+        # Run the scraper
+        result = scraper.scrape_url(url, store)
+        
+        return result
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"URL scraping failed: {str(e)}\n{error_detail}")
+
+
+@scraper_router.get("/jobs/{job_id}")
+async def get_scrape_job(job_id: int, db: Session = Depends(get_db)):
+    """Get status of a scrape job"""
+    from src.database.models import ScrapeJob
+    
+    job = db.query(ScrapeJob).filter(ScrapeJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return job.to_dict()
+
+
+@scraper_router.get("/jobs")
+async def list_scrape_jobs(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """List scrape jobs"""
+    from src.database.models import ScrapeJob
+    
+    jobs = db.query(ScrapeJob).order_by(ScrapeJob.created_at.desc()).offset(skip).limit(limit).all()
+    return [job.to_dict() for job in jobs]

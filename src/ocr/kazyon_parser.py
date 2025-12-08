@@ -71,18 +71,28 @@ def extract_product_name(lines: List[str], price_line_idx: int) -> str:
 
 
 def extract_price_from_kazyon_text(text: str) -> Optional[float]:
-    """Extract price from Kazyon-specific text format"""
-    # Try different patterns
+    """
+    Extract price from Kazyon-specific text format
+    Enhanced to handle Egyptian prices (ج.م, جنيه, EGP, LE)
+    Validates prices are in reasonable range (1-10000 EGP for groceries)
+    """
+    # Try different patterns specific to Egyptian currency
     patterns = [
-        r'(\d+\.?\d*)\s*EGP',
-        r'(\d+\.?\d*)\s*ج\.م',
-        r'(\d+\.?\d*)\s*جنيه',
-        r'(\d+\.?\d*)\s*LE'
+        r'(\d+[\.,]?\d*)\s*(?:جنيه|ج\.م|جم)',  # Arabic
+        r'(\d+[\.,]?\d*)\s*(?:EGP|LE|egp|le)',  # English abbreviations
+        r'(\d+[\.,]?\d*)\s*(?:pound)',          # English word
     ]
     
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            return float(match.group(1))
+            price_str = match.group(1).replace(',', '.')
+            try:
+                price = float(price_str)
+                # Validate price is in reasonable range for groceries
+                if 1.0 <= price <= 10000.0:
+                    return price
+            except ValueError:
+                continue
     
     return None

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { runScraper } from '../services/api'
-import { Play, FileDown, AlertCircle } from 'lucide-react'
+import { runScraper, scrapeFromUrl } from '../services/api'
+import { Play, FileDown, AlertCircle, Link as LinkIcon } from 'lucide-react'
 
 export default function Scrapers() {
   const [logs, setLogs] = useState<string[]>([])
+  const [catalogueUrl, setCatalogueUrl] = useState('')
+  const [urlStore, setUrlStore] = useState('kazyon')
 
   const scraperMutation = useMutation({
     mutationFn: runScraper,
@@ -21,9 +23,39 @@ export default function Scrapers() {
     },
   })
 
+  const urlScraperMutation = useMutation({
+    mutationFn: ({ url, store }: { url: string; store?: string }) => 
+      scrapeFromUrl(url, store),
+    onSuccess: (response) => {
+      const result = response.data
+      setLogs((prev) => [
+        ...prev, 
+        `✅ URL scraping completed!`,
+        `  📦 Products found: ${result.products_found}`,
+        `  📄 Pages processed: ${result.pages_processed}`,
+        `  💾 PDF saved: ${result.pdf_path}`
+      ])
+      setCatalogueUrl('') // Clear the input
+    },
+    onError: (error: any) => {
+      const errorMsg = error.response?.data?.detail || error.message
+      setLogs((prev) => [...prev, `❌ URL scraping failed: ${errorMsg}`])
+    },
+  })
+
   const handleRunScraper = (store: string) => {
     setLogs((prev) => [...prev, `🚀 Starting ${store} scraper...`])
     scraperMutation.mutate(store)
+  }
+
+  const handleScrapeUrl = () => {
+    if (!catalogueUrl.trim()) {
+      setLogs((prev) => [...prev, `⚠️ Please enter a URL`])
+      return
+    }
+    
+    setLogs((prev) => [...prev, `🚀 Starting URL scraper for: ${catalogueUrl}`])
+    urlScraperMutation.mutate({ url: catalogueUrl, store: urlStore })
   }
 
   const clearLogs = () => {
@@ -45,10 +77,11 @@ export default function Scrapers() {
         <div className="text-sm text-blue-800">
           <p className="font-semibold mb-1">How it works:</p>
           <ol className="list-decimal list-inside space-y-1">
-            <li>Scraper finds latest catalogues on Filloffer.com</li>
-            <li>Downloads PDF files</li>
-            <li>Converts to images and extracts text with OCR (Arabic + English)</li>
-            <li>Parses product names and prices</li>
+            <li>Enter a specific catalogue URL or use quick scrapers below</li>
+            <li>Scraper downloads all catalogue page images</li>
+            <li>Combines images into a PDF file</li>
+            <li>Extracts text with enhanced OCR (Arabic + English)</li>
+            <li>Parses product names and prices with validation</li>
             <li>Saves to database</li>
           </ol>
           <p className="mt-2 text-xs text-blue-600">
@@ -57,32 +90,93 @@ export default function Scrapers() {
         </div>
       </div>
 
-      {/* Scraper Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {[
-          { id: 'kazyon', name: 'Kazyon', emoji: '🛒', color: 'blue' },
-          { id: 'carrefour', name: 'Carrefour', emoji: '🏪', color: 'red' },
-          { id: 'metro', name: 'Metro', emoji: '🏬', color: 'orange' },
-          { id: 'all', name: 'All Stores', emoji: '🌟', color: 'green' },
-        ].map((store) => (
-          <div key={store.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
-            <div className="text-center mb-4">
-              <span className="text-4xl">{store.emoji}</span>
-              <h3 className="text-xl font-semibold mt-2">{store.name}</h3>
-            </div>
-            <button
-              onClick={() => handleRunScraper(store.id)}
-              disabled={scraperMutation.isPending}
-              className={`w-full bg-${store.color}-500 hover:bg-${store.color}-600 text-white px-4 py-3 rounded-md flex items-center justify-center disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
-              style={{
-                backgroundColor: scraperMutation.isPending ? '#d1d5db' : undefined
-              }}
-            >
-              <Play className="h-5 w-5 mr-2" />
-              {scraperMutation.isPending ? 'Running...' : 'Run Scraper'}
-            </button>
+      {/* URL Scraper Section */}
+      <div className="mb-8 bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <LinkIcon className="h-5 w-5 mr-2 text-blue-600" />
+          Scrape Specific Catalogue URL
+        </h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Enter a filloffer.com catalogue URL to scrape a specific catalogue
+        </p>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Catalogue URL
+            </label>
+            <input
+              type="url"
+              value={catalogueUrl}
+              onChange={(e) => setCatalogueUrl(e.target.value)}
+              placeholder="https://www.filloffer.com/markets/Kazyon-Market/new-offers-from-Kazyon-market-starting-from-4-december-8-december/pdf"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Example URLs:
+            </p>
+            <ul className="mt-1 text-xs text-gray-500 space-y-1">
+              <li>• https://www.filloffer.com/markets/Kazyon-Market/new-offers-from-Kazyon-market-starting-from-4-december-8-december/pdf</li>
+              <li>• https://www.filloffer.com/markets/Kazyon-Market/new-offers-from-Kazyon-market-Weekend-starting-from-2-december-to-8-december/pdf</li>
+            </ul>
           </div>
-        ))}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Store (optional - auto-detected from URL)
+            </label>
+            <select
+              value={urlStore}
+              onChange={(e) => setUrlStore(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="kazyon">Kazyon</option>
+              <option value="carrefour">Carrefour</option>
+              <option value="metro">Metro</option>
+              <option value="lulu">Lulu</option>
+            </select>
+          </div>
+          
+          <button
+            onClick={handleScrapeUrl}
+            disabled={urlScraperMutation.isPending || !catalogueUrl.trim()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md flex items-center justify-center disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            <LinkIcon className="h-5 w-5 mr-2" />
+            {urlScraperMutation.isPending ? 'Scraping URL...' : 'Scrape URL'}
+          </button>
+        </div>
+      </div>
+
+      {/* Scraper Cards */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Quick Scrapers</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { id: 'kazyon', name: 'Kazyon', emoji: '🛒', color: 'blue' },
+            { id: 'carrefour', name: 'Carrefour', emoji: '🏪', color: 'red' },
+            { id: 'metro', name: 'Metro', emoji: '🏬', color: 'orange' },
+            { id: 'all', name: 'All Stores', emoji: '🌟', color: 'green' },
+          ].map((store) => (
+            <div key={store.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+              <div className="text-center mb-4">
+                <span className="text-4xl">{store.emoji}</span>
+                <h3 className="text-xl font-semibold mt-2">{store.name}</h3>
+              </div>
+              <button
+                onClick={() => handleRunScraper(store.id)}
+                disabled={scraperMutation.isPending}
+                className={`w-full bg-${store.color}-500 hover:bg-${store.color}-600 text-white px-4 py-3 rounded-md flex items-center justify-center disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
+                style={{
+                  backgroundColor: scraperMutation.isPending ? '#d1d5db' : undefined
+                }}
+              >
+                <Play className="h-5 w-5 mr-2" />
+                {scraperMutation.isPending ? 'Running...' : 'Run Scraper'}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Quick Actions */}

@@ -11,6 +11,7 @@ import re
 from src.database.models import Product
 from src.database.manager import DatabaseManager
 from src.utils.categories import match_category
+from src.ocr.image_preprocessor import ImagePreprocessor
 
 
 class OCRProcessor:
@@ -18,8 +19,9 @@ class OCRProcessor:
 
     def __init__(self):
         self.db_manager = DatabaseManager()
-        # Configure Tesseract for Arabic + English
-        self.config = '--oem 3 --psm 6 -l ara+eng'
+        # Configure Tesseract for Arabic + English with LSTM engine
+        self.config = '--oem 1 --psm 11 -l ara+eng'
+        self.preprocessor = ImagePreprocessor()
 
     def process_flyer(self, image_path: str) -> List[Product]:
         """
@@ -28,15 +30,11 @@ class OCRProcessor:
         """
         print(f"🔍 Processing flyer: {image_path}")
 
-        # Load and preprocess image
-        image = cv2.imread(image_path)
-        if image is None:
-            raise ValueError(f"Failed to load image: {image_path}")
+        # Use enhanced preprocessing
+        processed_image = self.preprocessor.preprocess(image_path)
 
-        processed_image = self._preprocess_image(image)
-
-        # Extract text
-        text = pytesseract.image_to_string(processed_image, config=self.config)
+        # Extract text with multiple passes for better accuracy
+        text = self._extract_text_multi_pass(processed_image)
 
         # Parse products from text
         products = self._parse_flyer_text(text)
@@ -48,41 +46,27 @@ class OCRProcessor:
 
         return products
 
-    def _preprocess_image(self, image: np.ndarray) -> np.ndarray:
+    def _extract_text_multi_pass(self, image: np.ndarray) -> str:
         """
-        Preprocess image for better OCR accuracy
-        - Convert to grayscale
-        - Denoise
-        - Threshold
-        - Resize if needed
+        Extract text using multiple OCR passes with different configurations
+        Returns the longest/best result
         """
-        # Convert to grayscale
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        # Resize if too large (maintain aspect ratio)
-        height, width = gray.shape
-        if width > 2000:
-            scale = 2000 / width
-            new_width = 2000
-            new_height = int(height * scale)
-            gray = cv2.resize(gray, (new_width, new_height), interpolation=cv2.INTER_AREA)
-
-        # Denoise
-        denoised = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
-
-        # Threshold (adaptive)
-        thresh = cv2.adaptiveThreshold(
-            denoised, 255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY,
-            11, 2
-        )
-
-        # Morphological operations to clean up
-        kernel = np.ones((2, 2), np.uint8)
-        processed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-
-        return processed
+        configs = [
+            '--oem 1 --psm 11',  # LSTM + sparse text (best for flyers)
+            '--oem 1 --psm 6',   # LSTM + uniform block
+            '--oem 1 --psm 4',   # LSTM + single column
+        ]
+        
+        texts = []
+        for config in configs:
+            try:
+                text = pytesseract.image_to_string(image, lang='ara+eng', config=config)
+                texts.append(text)
+            except Exception:
+                continue
+        
+        # Return longest result
+        return max(texts, key=len) if texts else ""
 
     def _parse_flyer_text(self, text: str) -> List[Product]:
         """
