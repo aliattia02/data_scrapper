@@ -240,7 +240,8 @@ export default function Scrapers() {
             </p>
             {uploadFiles.length > 0 && (
               <div className="mt-2 text-sm text-green-600">
-                ✓ {uploadFiles.length} file(s) selected: {uploadFiles.map(f => f.name).join(', ')}
+                ✓ {uploadFiles.length} file(s) selected
+                {uploadFiles.length <= 3 ? `: ${uploadFiles.map(f => f.name).join(', ')}` : ''}
               </div>
             )}
           </div>

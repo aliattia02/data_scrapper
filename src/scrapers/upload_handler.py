@@ -158,11 +158,12 @@ class UploadHandler:
         processed_images = []
         for img_path in image_paths:
             img = Image.open(img_path)
+            original_mode = img.mode
             # Convert to RGB if necessary
-            if img.mode not in ['RGB', 'L']:
+            if original_mode not in ['RGB', 'L']:
                 img = img.convert('RGB')
             # Save as temporary file if conversion was needed
-            if img.mode != Image.open(img_path).mode:
+            if original_mode != img.mode:
                 temp_path = img_path.parent / f"converted_{img_path.name}"
                 img.save(temp_path)
                 processed_images.append(str(temp_path))
@@ -214,12 +215,12 @@ class UploadHandler:
             if valid_from:
                 try:
                     valid_from_dt = datetime.fromisoformat(valid_from.replace('Z', '+00:00'))
-                except:
+                except (ValueError, TypeError):
                     pass
             if valid_until:
                 try:
                     valid_until_dt = datetime.fromisoformat(valid_until.replace('Z', '+00:00'))
-                except:
+                except (ValueError, TypeError):
                     pass
             
             # Count pages in PDF
@@ -227,7 +228,7 @@ class UploadHandler:
                 from pdf2image.pdf2image import pdfinfo_from_path
                 info = pdfinfo_from_path(pdf_path)
                 page_count = info.get("Pages", 0)
-            except:
+            except Exception:
                 page_count = 0
             
             # Create catalogue

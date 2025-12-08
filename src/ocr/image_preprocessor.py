@@ -97,8 +97,9 @@ class ImagePreprocessor:
                     flags=cv2.INTER_CUBIC,
                     borderMode=cv2.BORDER_REPLICATE
                 )
-        except Exception as e:
+        except Exception:
             # If OSD fails, continue with original image
+            # Common failures: insufficient text, non-text images, etc.
             pass
         
         return image
