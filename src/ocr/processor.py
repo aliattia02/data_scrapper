@@ -20,6 +20,8 @@ class OCRProcessor:
     def __init__(self):
         self.db_manager = DatabaseManager()
         # Configure Tesseract for Arabic + English with LSTM engine
+        # OEM 1 = LSTM Neural Net mode (better accuracy for modern documents)
+        # PSM 11 = Sparse text mode (best for unstructured flyer layouts)
         self.config = '--oem 1 --psm 11 -l ara+eng'
         self.preprocessor = ImagePreprocessor()
 

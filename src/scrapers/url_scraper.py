@@ -5,6 +5,8 @@ Downloads images from catalogue pages and converts them to PDF
 import requests
 import time
 import hashlib
+import cv2
+import pytesseract
 from bs4 import BeautifulSoup
 from pathlib import Path
 from typing import List, Optional, Dict
@@ -16,6 +18,8 @@ from src.database.models import ScrapeJob, Product
 from src.database.manager import DatabaseManager
 from src.utils.categories import match_category
 from src.utils.helpers import extract_price, clean_product_name
+from src.ocr.processor import OCRProcessor
+from src.ocr.image_preprocessor import ImagePreprocessor
 
 
 class URLScraper:
@@ -333,9 +337,6 @@ class URLScraper:
     
     def _process_with_ocr(self, image_paths: List[Path], source_url: str, store: str) -> List[Product]:
         """Process images with OCR to extract products"""
-        from src.ocr.processor import OCRProcessor
-        from src.ocr.image_preprocessor import ImagePreprocessor
-        
         products = []
         preprocessor = ImagePreprocessor()
         
@@ -348,7 +349,6 @@ class URLScraper:
                 
                 # Save preprocessed image for debugging
                 processed_path = img_path.parent / f"{img_path.stem}_processed.jpg"
-                import cv2
                 cv2.imwrite(str(processed_path), processed_image)
                 
                 # Extract text with improved OCR
@@ -382,8 +382,6 @@ class URLScraper:
         Extract text using enhanced OCR settings for Arabic grocery flyers
         Uses LSTM engine (--oem 1) and sparse text mode (--psm 11)
         """
-        import pytesseract
-        
         # Try multiple configurations and return the best result
         configs = [
             '--oem 1 --psm 11',  # LSTM + sparse text (best for flyers)

@@ -153,10 +153,10 @@ export default function Scrapers() {
         <h2 className="text-xl font-semibold mb-4">Quick Scrapers</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { id: 'kazyon', name: 'Kazyon', emoji: '🛒', color: 'blue' },
-            { id: 'carrefour', name: 'Carrefour', emoji: '🏪', color: 'red' },
-            { id: 'metro', name: 'Metro', emoji: '🏬', color: 'orange' },
-            { id: 'all', name: 'All Stores', emoji: '🌟', color: 'green' },
+            { id: 'kazyon', name: 'Kazyon', emoji: '🛒', color: 'bg-blue-500 hover:bg-blue-600' },
+            { id: 'carrefour', name: 'Carrefour', emoji: '🏪', color: 'bg-red-500 hover:bg-red-600' },
+            { id: 'metro', name: 'Metro', emoji: '🏬', color: 'bg-orange-500 hover:bg-orange-600' },
+            { id: 'all', name: 'All Stores', emoji: '🌟', color: 'bg-green-500 hover:bg-green-600' },
           ].map((store) => (
             <div key={store.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
               <div className="text-center mb-4">
@@ -166,10 +166,7 @@ export default function Scrapers() {
               <button
                 onClick={() => handleRunScraper(store.id)}
                 disabled={scraperMutation.isPending}
-                className={`w-full bg-${store.color}-500 hover:bg-${store.color}-600 text-white px-4 py-3 rounded-md flex items-center justify-center disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
-                style={{
-                  backgroundColor: scraperMutation.isPending ? '#d1d5db' : undefined
-                }}
+                className={`w-full ${store.color} text-white px-4 py-3 rounded-md flex items-center justify-center disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
               >
                 <Play className="h-5 w-5 mr-2" />
                 {scraperMutation.isPending ? 'Running...' : 'Run Scraper'}
