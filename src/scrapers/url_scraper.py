@@ -40,6 +40,12 @@ class URLScraper:
     # Arabic month names pattern for filtering dates
     MONTH_PATTERN = r'ديسمبر|يناير|فبراير|مارس|ابريل|مايو|يونيو|يوليو|اغسطس|سبتمبر|اكتوبر|نوفمبر|Nov|Dec'
     
+    # Price validation range for Egyptian groceries (in EGP)
+    # Min: 5 EGP (small items like single piece snacks)
+    # Max: 5000 EGP (large bulk purchases or appliances in grocery stores)
+    MIN_PRICE = 5.0
+    MAX_PRICE = 5000.0
+    
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
         self.session = requests.Session()
@@ -509,12 +515,16 @@ class URLScraper:
         return True
 
     def _clean_product_name(self, name: str) -> str:
-        """Clean product name from OCR artifacts"""
-        # Remove English letters mixed in
+        """
+        Clean product name from OCR artifacts specific to Kazyon flyers
+        This is more targeted than the generic clean_product_name helper
+        and preserves important product information like sizes/quantities
+        """
+        # Remove English letters mixed in (OCR artifacts)
         name = re.sub(r'[a-zA-Z]{1,3}(?=\s|$)', '', name)
         # Remove excessive punctuation
         name = re.sub(r'[;:,\.\*\+\-\|\[\]\(\)]+', ' ', name)
-        # Remove numbers at start/end
+        # Remove numbers at start/end (but preserve in middle for sizes like "2 كجم")
         name = re.sub(r'^\d+\s*', '', name)
         name = re.sub(r'\s*\d+$', '', name)
         # Clean whitespace
@@ -538,9 +548,9 @@ class URLScraper:
         for ar, en in arabic_to_english.items():
             text = text.replace(ar, en)
         
-        # Clean OCR artifacts (semicolons become dots, random letters removed)
-        text = text.replace(';', '.')  # Simple replacement for better performance
-        text = re.sub(r'[a-zA-Z]+$', '', text)  # Remove trailing letters
+        # Clean OCR artifacts
+        text = text.replace(';', '.')  # OCR often reads decimals as semicolons
+        text = re.sub(r'[a-zA-Z]+$', '', text)  # Remove trailing letters (e.g., "995 Salg")
         text = re.sub(r'^[a-zA-Z]+', '', text)  # Remove leading letters
         
         # Price patterns - from most specific to least
@@ -552,8 +562,8 @@ class URLScraper:
             # Decimal prices (XX.XX or XXX.XX format - common for Egyptian prices)
             r'\b(\d{2,3}\.\d{1,2})\b',
             # Whole number prices (2-4 digits, typical grocery range)
-            # Exclude month names using class constant
-            r'\b(\d{2,4})\b(?!\s*(?:' + self.MONTH_PATTERN + r'))',
+            # Exclude month names to avoid matching dates
+            rf'\b(\d{{2,4}})\b(?!\s*(?:{self.MONTH_PATTERN}))',
         ]
         
         for pattern in patterns:
@@ -562,8 +572,8 @@ class URLScraper:
                 price_str = match.group(1).replace(',', '.')
                 try:
                     price = float(price_str)
-                    # Validate range for Egyptian groceries (5-5000 EGP)
-                    if 5.0 <= price <= 5000.0:
+                    # Validate range for Egyptian groceries
+                    if self.MIN_PRICE <= price <= self.MAX_PRICE:
                         return price
                 except ValueError:
                     continue
