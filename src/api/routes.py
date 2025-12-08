@@ -1,7 +1,7 @@
 """
 src/api/routes.py - FastAPI Routes for Admin Dashboard
 """
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -342,3 +342,57 @@ async def list_scrape_jobs(
     
     jobs = db.query(ScrapeJob).order_by(ScrapeJob.created_at.desc()).offset(skip).limit(limit).all()
     return [job.to_dict() for job in jobs]
+
+
+@scraper_router.post("/upload-catalogue")
+async def upload_catalogue(
+    files: List[UploadFile] = File(...),
+    store: str = Form(...),
+    valid_from: Optional[str] = Form(None),
+    valid_until: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload catalogue files (images or PDF) for manual processing
+    
+    Form data:
+    - files: Multiple image files (.jpg, .png) or single PDF file
+    - store: Store identifier (kazyon, carrefour, metro, etc.)
+    - valid_from: Optional offer start date (ISO format)
+    - valid_until: Optional offer end date (ISO format)
+    
+    Returns:
+    {
+        "status": "completed",
+        "catalogue_id": 123,
+        "pdf_path": "/path/to/pdf",
+        "products_extracted": 45,
+        "pages_processed": 12
+    }
+    """
+    try:
+        from src.scrapers.upload_handler import UploadHandler
+        from src.database.manager import DatabaseManager
+        
+        db_manager = DatabaseManager()
+        upload_handler = UploadHandler(db_manager)
+        
+        # Process the upload
+        result = upload_handler.process_upload(
+            files=files,
+            store=store,
+            valid_from=valid_from,
+            valid_until=valid_until
+        )
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Upload processing failed: {str(e)}\n{error_detail}"
+        )

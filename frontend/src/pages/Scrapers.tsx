@@ -1,12 +1,19 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { runScraper, scrapeFromUrl } from '../services/api'
-import { Play, FileDown, AlertCircle, Link as LinkIcon } from 'lucide-react'
+import { runScraper, scrapeFromUrl, uploadCatalogue } from '../services/api'
+import { Play, FileDown, AlertCircle, Link as LinkIcon, Upload, Calendar } from 'lucide-react'
 
 export default function Scrapers() {
   const [logs, setLogs] = useState<string[]>([])
   const [catalogueUrl, setCatalogueUrl] = useState('')
   const [urlStore, setUrlStore] = useState('kazyon')
+  
+  // Manual upload state
+  const [uploadFiles, setUploadFiles] = useState<File[]>([])
+  const [uploadStore, setUploadStore] = useState('kazyon')
+  const [uploadValidFrom, setUploadValidFrom] = useState('')
+  const [uploadValidUntil, setUploadValidUntil] = useState('')
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   const scraperMutation = useMutation({
     mutationFn: runScraper,
@@ -43,6 +50,38 @@ export default function Scrapers() {
     },
   })
 
+  const uploadMutation = useMutation({
+    mutationFn: ({ files, store, validFrom, validUntil }: { 
+      files: File[], 
+      store: string, 
+      validFrom?: string, 
+      validUntil?: string 
+    }) => uploadCatalogue(files, store, validFrom, validUntil),
+    onSuccess: (response) => {
+      const result = response.data
+      setLogs((prev) => [
+        ...prev,
+        `✅ Upload completed!`,
+        `  📦 Products extracted: ${result.products_extracted}`,
+        `  📄 Pages processed: ${result.pages_processed}`,
+        `  💾 Catalogue ID: ${result.catalogue_id}`
+      ])
+      // Clear upload form
+      setUploadFiles([])
+      setUploadValidFrom('')
+      setUploadValidUntil('')
+      setUploadProgress(0)
+      // Reset file input
+      const fileInput = document.getElementById('file-upload') as HTMLInputElement
+      if (fileInput) fileInput.value = ''
+    },
+    onError: (error: any) => {
+      const errorMsg = error.response?.data?.detail || error.message
+      setLogs((prev) => [...prev, `❌ Upload failed: ${errorMsg}`])
+      setUploadProgress(0)
+    },
+  })
+
   const handleRunScraper = (store: string) => {
     setLogs((prev) => [...prev, `🚀 Starting ${store} scraper...`])
     scraperMutation.mutate(store)
@@ -56,6 +95,31 @@ export default function Scrapers() {
     
     setLogs((prev) => [...prev, `🚀 Starting URL scraper for: ${catalogueUrl}`])
     urlScraperMutation.mutate({ url: catalogueUrl, store: urlStore })
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files)
+      setUploadFiles(filesArray)
+      setLogs((prev) => [...prev, `📁 ${filesArray.length} file(s) selected`])
+    }
+  }
+
+  const handleUpload = () => {
+    if (uploadFiles.length === 0) {
+      setLogs((prev) => [...prev, `⚠️ Please select at least one file`])
+      return
+    }
+    
+    setUploadProgress(10)
+    setLogs((prev) => [...prev, `🚀 Uploading ${uploadFiles.length} file(s) for ${uploadStore}...`])
+    
+    uploadMutation.mutate({
+      files: uploadFiles,
+      store: uploadStore,
+      validFrom: uploadValidFrom || undefined,
+      validUntil: uploadValidUntil || undefined
+    })
   }
 
   const clearLogs = () => {
@@ -145,6 +209,104 @@ export default function Scrapers() {
             <LinkIcon className="h-5 w-5 mr-2" />
             {urlScraperMutation.isPending ? 'Scraping URL...' : 'Scrape URL'}
           </button>
+        </div>
+      </div>
+
+      {/* Manual Upload Section */}
+      <div className="mb-8 bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <Upload className="h-5 w-5 mr-2 text-purple-600" />
+          Manual Catalogue Upload
+        </h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Upload your own catalogue images or PDF for OCR processing
+        </p>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Catalogue Files
+            </label>
+            <input
+              id="file-upload"
+              type="file"
+              multiple
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={handleFileChange}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Accepts: Multiple images (.jpg, .png) or single PDF file
+            </p>
+            {uploadFiles.length > 0 && (
+              <div className="mt-2 text-sm text-green-600">
+                ✓ {uploadFiles.length} file(s) selected: {uploadFiles.map(f => f.name).join(', ')}
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Store
+            </label>
+            <select
+              value={uploadStore}
+              onChange={(e) => setUploadStore(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="kazyon">Kazyon</option>
+              <option value="carrefour">Carrefour</option>
+              <option value="metro">Metro</option>
+              <option value="lulu">Lulu</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                <Calendar className="h-4 w-4 mr-1" />
+                Valid From (Optional)
+              </label>
+              <input
+                type="date"
+                value={uploadValidFrom}
+                onChange={(e) => setUploadValidFrom(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                <Calendar className="h-4 w-4 mr-1" />
+                Valid Until (Optional)
+              </label>
+              <input
+                type="date"
+                value={uploadValidUntil}
+                onChange={(e) => setUploadValidUntil(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          
+          <button
+            onClick={handleUpload}
+            disabled={uploadMutation.isPending || uploadFiles.length === 0}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-md flex items-center justify-center disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            <Upload className="h-5 w-5 mr-2" />
+            {uploadMutation.isPending ? 'Processing Upload...' : 'Upload & Process'}
+          </button>
+          
+          {uploadMutation.isPending && uploadProgress > 0 && (
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          )}
         </div>
       </div>
 

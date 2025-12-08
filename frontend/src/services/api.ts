@@ -56,5 +56,33 @@ export const getScrapeJob = (jobId: number) =>
 export const listScrapeJobs = () =>
   api.get('/api/v1/scraper/jobs')
 
+// Upload catalogue
+export const uploadCatalogue = (
+  files: File[],
+  store: string,
+  validFrom?: string,
+  validUntil?: string
+) => {
+  const formData = new FormData()
+  
+  // Append all files
+  files.forEach((file) => {
+    formData.append('files', file)
+  })
+  
+  // Append store and dates
+  formData.append('store', store)
+  if (validFrom) {
+    formData.append('valid_from', validFrom)
+  }
+  if (validUntil) {
+    formData.append('valid_until', validUntil)
+  }
+  
+  return api.post('/api/v1/scraper/upload-catalogue', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
 // Stats
 export const getStats = () => api.get<Stats>('/stats')
