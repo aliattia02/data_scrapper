@@ -19,6 +19,16 @@ class Store(Base):
     name_en = Column(String(200), nullable=False)
     logo_url = Column(String(500))
     website = Column(String(500))
+
+    # NEW Location fields
+    latitude = Column(Float)
+    longitude = Column(Float)
+    address_ar = Column(String(500))
+    address_en = Column(String(500))
+    city = Column(String(100))
+    governorate = Column(String(100))
+    phone = Column(String(50))
+
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
@@ -33,6 +43,13 @@ class Store(Base):
             "nameEn": self.name_en,
             "logoUrl": self.logo_url,
             "website": self.website,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "addressAr": self.address_ar,
+            "addressEn": self.address_en,
+            "city": self.city,
+            "governorate": self.governorate,
+            "phone": self.phone,
             "active": self.active,
             "branchCount": len(self.branches) if self.branches else 0
         }
@@ -214,6 +231,7 @@ class Catalogue(Base):
     file_path = Column(String(1000))
     file_type = Column(String(20))
     page_count = Column(Integer, default=0)
+    source_url = Column(String(1000))  # ADD THIS LINE
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     processed_at = Column(DateTime)

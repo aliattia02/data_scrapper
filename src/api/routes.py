@@ -251,26 +251,25 @@ async def export_for_mobile_app(db: Session = Depends(get_db)):
 async def run_scraper(request_data: dict, db: Session = Depends(get_db)):
     """Trigger scrapers"""
     store = request_data.get('store', 'all')
-    
+
     try:
-        from src.scrapers.carrefour import CarrefourScraper
-        from src.scrapers.metro import MetroScraper
+        from src.scrapers.filloffer import FillofferScraper
         from src.database.manager import DatabaseManager
-        
+
         db_manager = DatabaseManager()
         results = []
-        
-        if store in ['all', 'carrefour']:
-            scraper = CarrefourScraper(db_manager)
-            products = scraper.scrape()
-            results.append({"store": "carrefour", "products": len(products)})
-        
-        if store in ['all', 'metro']:
-            scraper = MetroScraper(db_manager)
-            products = scraper.scrape()
-            results.append({"store": "metro", "products": len(products)})
-        
+
+        if store == 'all':
+            scraper = FillofferScraper(db_manager)
+        else:
+            scraper = FillofferScraper(db_manager, target_store=store)
+
+        products = scraper.scrape()
+        results.append({"store": store, "products": len(products)})
+
         return {"message": "Scraping completed", "results": results}
-    
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Scraping failed: {str(e)}")
+        import traceback
+        error_detail = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Scraping failed: {str(e)}\n{error_detail}")

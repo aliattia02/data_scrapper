@@ -1,8 +1,8 @@
 # Backend
 cd data_scrapper
 pip install -r requirements. txt
-python -m src.main db --init      # Initialize database
-python -m src.main db --seed      # Add Zagazig stores
+python -m src.main db init    # Not --init
+python -m src.main db seed    # Not --seed (though this might not exist)
 python -m src.main serve          # Start API on :8000
 
 # Frontend (separate terminal)

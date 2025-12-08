@@ -1,45 +1,167 @@
 """
-src/utils/categories.py - Egyptian Product Categories
+src/utils/categories.py - Category matching and management
 """
+from typing import Tuple, List, Dict
+
 
 CATEGORIES = [
-    {'id': 'dairy', 'name_ar': 'ألبان', 'name_en': 'Dairy', 'icon': 'milk', 'keywords_ar': ['حليب', 'لبن', 'جبن', 'زبادي', 'قشطة'], 'keywords_en': ['milk', 'cheese', 'yogurt', 'cream']},
-    {'id': 'meat', 'name_ar': 'لحوم', 'name_en': 'Meat', 'icon': 'meat', 'keywords_ar': ['لحم', 'دجاج', 'فراخ', 'سمك'], 'keywords_en': ['meat', 'chicken', 'fish', 'beef']},
-    {'id': 'oils', 'name_ar': 'زيوت', 'name_en': 'Oils', 'icon': 'oil', 'keywords_ar': ['زيت', 'سمن'], 'keywords_en': ['oil', 'ghee', 'butter']},
-    {'id': 'grains', 'name_ar': 'حبوب', 'name_en': 'Grains', 'icon': 'grain', 'keywords_ar': ['أرز', 'مكرونة', 'دقيق', 'عيش'], 'keywords_en': ['rice', 'pasta', 'flour', 'bread']},
-    {'id': 'beverages', 'name_ar': 'مشروبات', 'name_en': 'Beverages', 'icon': 'drink', 'keywords_ar': ['عصير', 'مياه', 'شاي', 'قهوة', 'نسكافيه'], 'keywords_en': ['juice', 'water', 'tea', 'coffee']},
-    {'id': 'snacks', 'name_ar': 'سناكس', 'name_en': 'Snacks', 'icon': 'snack', 'keywords_ar': ['شيبسي', 'بسكويت', 'شوكولاتة'], 'keywords_en': ['chips', 'biscuits', 'chocolate', 'cookies']},
-    {'id': 'household', 'name_ar': 'منظفات', 'name_en': 'Household', 'icon': 'clean', 'keywords_ar': ['منظف', 'صابون', 'فيري', 'أومو'], 'keywords_en': ['detergent', 'soap', 'cleaner']},
-    {'id': 'personal_care', 'name_ar': 'عناية شخصية', 'name_en': 'Personal Care', 'icon': 'person', 'keywords_ar': ['شامبو', 'معجون', 'صابون'], 'keywords_en': ['shampoo', 'toothpaste', 'soap']},
-    {'id': 'baby', 'name_ar': 'أطفال', 'name_en': 'Baby', 'icon': 'baby', 'keywords_ar': ['حفاضات', 'بامبرز', 'لبن أطفال'], 'keywords_en': ['diapers', 'pampers', 'baby milk']},
-    {'id': 'frozen', 'name_ar': 'مجمدات', 'name_en': 'Frozen', 'icon': 'frozen', 'keywords_ar': ['مجمد', 'ايس كريم'], 'keywords_en': ['frozen', 'ice cream']},
-    {'id': 'bakery', 'name_ar': 'مخبوزات', 'name_en': 'Bakery', 'icon': 'bread', 'keywords_ar': ['خبز', 'توست', 'كعك'], 'keywords_en': ['bread', 'toast', 'cake']},
-    {'id': 'vegetables', 'name_ar': 'خضروات', 'name_en': 'Vegetables', 'icon': 'vegetable', 'keywords_ar': ['خضار', 'طماطم', 'بطاطس', 'فاكهة'], 'keywords_en': ['vegetable', 'tomato', 'potato', 'fruit']},
+    {
+        'id': 'dairy',
+        'name_ar': 'منتجات الألبان',
+        'name_en': 'Dairy Products',
+        'icon': '🥛',
+        'keywords_ar': ['حليب', 'لبن', 'جبن', 'زبادي', 'روب', 'قشطة', 'زبدة', 'جبنة'],
+        'keywords_en': ['milk', 'cheese', 'yogurt', 'butter', 'cream', 'dairy']
+    },
+    {
+        'id': 'meat',
+        'name_ar': 'اللحوم والدواجن',
+        'name_en': 'Meat & Poultry',
+        'icon': '🍖',
+        'keywords_ar': ['لحم', 'دجاج', 'فراخ', 'بيف', 'كفتة', 'سجق', 'همبرجر'],
+        'keywords_en': ['meat', 'chicken', 'beef', 'poultry', 'burger', 'sausage']
+    },
+    {
+        'id': 'fish',
+        'name_ar': 'الأسماك والمأكولات البحرية',
+        'name_en': 'Fish & Seafood',
+        'icon': '🐟',
+        'keywords_ar': ['سمك', 'جمبري', 'كابوريا', 'تونة'],
+        'keywords_en': ['fish', 'shrimp', 'tuna', 'seafood', 'salmon']
+    },
+    {
+        'id': 'fruits',
+        'name_ar': 'الفواكه',
+        'name_en': 'Fruits',
+        'icon': '🍎',
+        'keywords_ar': ['تفاح', 'موز', 'برتقال', 'عنب', 'فراولة', 'مانجو', 'بطيخ', 'فاكهة'],
+        'keywords_en': ['apple', 'banana', 'orange', 'grape', 'strawberry', 'mango', 'fruit']
+    },
+    {
+        'id': 'vegetables',
+        'name_ar': 'الخضروات',
+        'name_en': 'Vegetables',
+        'icon': '🥕',
+        'keywords_ar': ['طماطم', 'بطاطس', 'خيار', 'جزر', 'بصل', 'خضار', 'فلفل', 'كوسة'],
+        'keywords_en': ['tomato', 'potato', 'cucumber', 'carrot', 'onion', 'vegetable', 'pepper']
+    },
+    {
+        'id': 'bakery',
+        'name_ar': 'المخبوزات',
+        'name_en': 'Bakery',
+        'icon': '🍞',
+        'keywords_ar': ['خبز', 'عيش', 'كيك', 'بسكويت', 'كرواسون'],
+        'keywords_en': ['bread', 'cake', 'cookie', 'biscuit', 'croissant', 'bakery']
+    },
+    {
+        'id': 'rice',
+        'name_ar': 'الأرز والمكرونة',
+        'name_en': 'Rice & Pasta',
+        'icon': '🍚',
+        'keywords_ar': ['أرز', 'رز', 'مكرونة', 'معكرونة', 'باستا', 'شعرية'],
+        'keywords_en': ['rice', 'pasta', 'noodles', 'spaghetti', 'macaroni']
+    },
+    {
+        'id': 'oils',
+        'name_ar': 'الزيوت والسمن',
+        'name_en': 'Oils & Ghee',
+        'icon': '🛢️',
+        'keywords_ar': ['زيت', 'سمن', 'زبدة'],
+        'keywords_en': ['oil', 'ghee', 'butter', 'margarine']
+    },
+    {
+        'id': 'beverages',
+        'name_ar': 'المشروبات',
+        'name_en': 'Beverages',
+        'icon': '🥤',
+        'keywords_ar': ['عصير', 'مياه', 'ماء', 'شاي', 'قهوة', 'نسكافيه', 'كولا', 'بيبسي'],
+        'keywords_en': ['juice', 'water', 'tea', 'coffee', 'cola', 'pepsi', 'beverage', 'drink']
+    },
+    {
+        'id': 'snacks',
+        'name_ar': 'الوجبات الخفيفة',
+        'name_en': 'Snacks',
+        'icon': '🍿',
+        'keywords_ar': ['شيبسي', 'بسكويت', 'شوكولاتة', 'حلويات', 'سناك'],
+        'keywords_en': ['chips', 'snack', 'chocolate', 'candy', 'sweets', 'popcorn']
+    },
+    {
+        'id': 'frozen',
+        'name_ar': 'المجمدات',
+        'name_en': 'Frozen Foods',
+        'icon': '❄️',
+        'keywords_ar': ['مجمد', 'آيس كريم', 'بوظة'],
+        'keywords_en': ['frozen', 'ice cream', 'popsicle']
+    },
+    {
+        'id': 'cleaning',
+        'name_ar': 'منتجات التنظيف',
+        'name_en': 'Cleaning Products',
+        'icon': '🧹',
+        'keywords_ar': ['منظف', 'صابون', 'مسحوق', 'تايد', 'أومو', 'فيري', 'ديتول'],
+        'keywords_en': ['detergent', 'soap', 'cleaner', 'tide', 'omo', 'fairy', 'dettol']
+    },
+    {
+        'id': 'personal_care',
+        'name_ar': 'العناية الشخصية',
+        'name_en': 'Personal Care',
+        'icon': '🧴',
+        'keywords_ar': ['شامبو', 'صابون', 'معجون', 'فرشاة', 'كريم', 'مزيل'],
+        'keywords_en': ['shampoo', 'soap', 'toothpaste', 'cream', 'deodorant', 'lotion']
+    },
+    {
+        'id': 'baby',
+        'name_ar': 'منتجات الأطفال',
+        'name_en': 'Baby Products',
+        'icon': '👶',
+        'keywords_ar': ['حفاضات', 'بامبرز', 'لبن أطفال', 'سيريلاك'],
+        'keywords_en': ['diaper', 'pampers', 'baby', 'infant', 'cerelac']
+    },
+    {
+        'id': 'other',
+        'name_ar': 'منتجات أخرى',
+        'name_en': 'Other Products',
+        'icon': '📦',
+        'keywords_ar': [],
+        'keywords_en': []
+    }
 ]
 
-def get_all_categories():
-    """Get all categories"""
+
+def match_category(product_name: str) -> Tuple[str, str]:
+    """
+    Match product name to category
+    Returns: (category_ar, category_en)
+    """
+    if not product_name:
+        return "منتجات أخرى", "Other Products"
+
+    product_name_lower = product_name.lower()
+
+    # Check each category
+    for category in CATEGORIES:
+        # Check Arabic keywords
+        for keyword in category['keywords_ar']:
+            if keyword in product_name_lower:
+                return category['name_ar'], category['name_en']
+
+        # Check English keywords
+        for keyword in category['keywords_en']:
+            if keyword in product_name_lower:
+                return category['name_ar'], category['name_en']
+
+    # Default to "Other"
+    return "منتجات أخرى", "Other Products"
+
+
+def get_all_categories() -> List[Dict]:
+    """Get all categories for database seeding"""
     return CATEGORIES
 
-def match_category(product_name: str):
-    """Match product name to category based on keywords"""
-    product_lower = product_name.lower()
-    
-    for cat in CATEGORIES:
-        # Check Arabic keywords
-        for keyword in cat['keywords_ar']:
-            if keyword in product_lower:
-                return cat['name_ar'], cat['name_en']
-        # Check English keywords
-        for keyword in cat['keywords_en']:
-            if keyword in product_lower:
-                return cat['name_ar'], cat['name_en']
-    
-    return 'أخرى', 'Other'
 
-def get_category_by_id(category_id: str):
+def get_category_by_id(category_id: str) -> Dict:
     """Get category by ID"""
-    for cat in CATEGORIES:
-        if cat['id'] == category_id:
-            return cat
-    return None
+    for category in CATEGORIES:
+        if category['id'] == category_id:
+            return category
+    return CATEGORIES[-1]  # Return 'other' as default

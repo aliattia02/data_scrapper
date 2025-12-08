@@ -11,6 +11,9 @@ export default function Stores() {
     name_ar: '',
     name_en: '',
     website: '',
+    city: '',
+    governorate: '',
+    address_ar: '',
     active: true
   })
 
@@ -34,6 +37,9 @@ export default function Stores() {
         name_ar: '',
         name_en: '',
         website: '',
+        city: '',
+        governorate: '',
+        address_ar: '',
         active: true
       })
       alert('Store created successfully!')
@@ -56,7 +62,7 @@ export default function Stores() {
     <div className="px-4 py-6">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Stores</h1>
-        <button
+        <button 
           onClick={() => setIsModalOpen(true)}
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
         >
@@ -70,9 +76,9 @@ export default function Stores() {
             <h3 className="text-xl font-semibold mb-2">{store.nameEn}</h3>
             <p className="text-gray-600 mb-4">{store.nameAr}</p>
             {store.website && (
-              <a
-                href={store.website}
-                target="_blank"
+              <a 
+                href={store.website} 
+                target="_blank" 
                 rel="noopener noreferrer"
                 className="text-blue-500 text-sm hover:underline mb-2 block"
               >
@@ -97,7 +103,7 @@ export default function Stores() {
           <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">Add New Store</h2>
-              <button
+              <button 
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -159,6 +165,48 @@ export default function Stores() {
                   onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                   placeholder="https://example.com"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.city || ''}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="e.g., Zagazig"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Governorate
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.governorate || ''}
+                    onChange={(e) => setFormData({ ...formData, governorate: e.target.value })}
+                    placeholder="e.g., Sharqia"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Address (Arabic)
+                </label>
+                <input
+                  type="text"
+                  value={formData.address_ar || ''}
+                  onChange={(e) => setFormData({ ...formData, address_ar: e.target.value })}
+                  placeholder="e.g., شارع الجلاء"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  dir="rtl"
                 />
               </div>
 
