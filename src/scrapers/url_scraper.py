@@ -380,92 +380,94 @@ class URLScraper:
     def _extract_text_enhanced(self, image) -> str:
         """
         Extract text using enhanced OCR settings for Arabic grocery flyers
-        Uses LSTM engine (--oem 1) and sparse text mode (--psm 11)
         """
-        # Try multiple configurations and return the best result
+        # Try configurations optimized for Arabic flyers
         configs = [
-            '--oem 1 --psm 11',  # LSTM + sparse text (best for flyers)
-            '--oem 1 --psm 6',   # LSTM + uniform block
-            '--oem 1 --psm 4',   # LSTM + single column
+            '--oem 1 --psm 6 -l ara+eng',   # LSTM + uniform block (best for structured flyers)
+            '--oem 1 --psm 11 -l ara+eng',  # LSTM + sparse text
+            '--oem 1 --psm 3 -l ara+eng',   # LSTM + auto
         ]
         
         texts = []
         for config in configs:
             try:
-                text = pytesseract.image_to_string(image, lang='ara+eng', config=config)
+                text = pytesseract.image_to_string(image, config=config)
                 texts.append(text)
             except:
                 continue
         
-        # Return longest result
+        # Return longest result (usually has more useful content)
         return max(texts, key=len) if texts else ""
     
     def _extract_products_enhanced(self, text: str, source_url: str, store: str, page_num: int) -> List[Product]:
         """
-        Enhanced product extraction with better price validation and noise filtering
+        Enhanced product extraction using sliding window for price-name association
         """
         products = []
-        lines = [l.strip() for l in text.split('\n') if l.strip()]
+        lines = [l.strip() for l in text.split('\n') if l.strip() and len(l.strip()) > 1]
         
-        # Noise words to filter out
-        noise_words = [
-            'page', 'offer', 'valid', 'market', 'www.', 'http', 'filloffer',
-            'كازيون', 'kazyon', 'ماركت', 'عروض', 'صفحة'
+        # Noise patterns to filter
+        noise_patterns = [
+            r'www\.',  r'\.com', r'\.eg',
+            r'ديسمبر|يناير|فبراير|مارس',  # Months
+            r'خميس|جمعة|سبت|احد|اثنين|ثلاثاء|اربعاء',  # Days
+            r'حتى|من|الى',  # Date words
+            r'kazyon|كازيون|ماركت|market|bim',  # Store names
+            r'نوفمبر|اكتوبر|Nov|Dec',
+        ]
+        
+        # Arabic product keywords (indicates this is likely a product name)
+        product_keywords = [
+            'دجاج', 'لحم', 'برجر', 'جبنة', 'زبدة', 'لبن', 'حليب', 'زيت',
+            'أرز', 'مكرونة', 'سكر', 'شاي', 'قهوة', 'عصير', 'مياه',
+            'صابون', 'شامبو', 'منظف', 'معجون', 'بسكويت', 'شيكولاتة',
+            'تونة', 'سمك', 'بيض', 'خضار', 'فاكهة', 'طماطم', 'بطاطس',
+            'فول', 'عدس', 'فاصوليا', 'بازلاء', 'ذرة', 'خبز', 'توست',
+            'مجمد', 'طازج', 'معلب', 'بانيه', 'صدور', 'اوراك', 'مشكل',
+            'كجم', 'جرام', 'لتر', 'مل', 'قطعة', 'علبة', 'كيس', 'عبوة'
         ]
         
         i = 0
         while i < len(lines):
             line = lines[i]
             
-            if len(line) < 3:
+            # Skip noise lines
+            if any(re.search(pattern, line, re.IGNORECASE) for pattern in noise_patterns):
                 i += 1
                 continue
             
-            # Look for price with enhanced pattern
+            # Try to extract price from current line
             price = self._extract_price_enhanced(line)
             
-            # Validate price is in reasonable range for groceries (1-10000 EGP)
-            if price and 1.0 <= price <= 10000.0:
-                # Build product name from surrounding lines
-                name_parts = []
+            if price:
+                # Look for product name in surrounding lines
+                name_candidates = []
                 
-                # Previous lines (up to 3)
+                # Check previous 3 lines
                 for j in range(max(0, i-3), i):
                     prev_line = lines[j]
-                    if prev_line and len(prev_line) > 2:
-                        # Skip if line has price or is noise
-                        if not self._extract_price_enhanced(prev_line):
-                            name_parts.append(prev_line)
+                    if self._is_likely_product_name(prev_line, product_keywords, noise_patterns):
+                        name_candidates.append((prev_line, i - j))  # (name, distance)
                 
-                # Current line (remove price)
-                current_clean = re.sub(
-                    r'\d+[\.,]?\d*\s*(جنيه|ج\.م|egp|le|pound|جم)?',
-                    '',
-                    line,
-                    flags=re.IGNORECASE
-                ).strip()
+                # Check next 2 lines
+                for j in range(i+1, min(len(lines), i+3)):
+                    next_line = lines[j]
+                    if self._is_likely_product_name(next_line, product_keywords, noise_patterns):
+                        name_candidates.append((next_line, j - i))
                 
-                if current_clean and len(current_clean) > 2:
-                    name_parts.append(current_clean)
+                # Sort by distance (prefer closer names)
+                name_candidates.sort(key=lambda x: x[1])
                 
-                # Next line if name too short
-                if i + 1 < len(lines) and len(' '.join(name_parts)) < 10:
-                    next_line = lines[i + 1]
-                    if next_line and not self._extract_price_enhanced(next_line):
-                        name_parts.append(next_line)
-                
-                name = ' '.join(name_parts)
-                name = clean_product_name(name)
-                
-                # Validate product name
-                if name and 3 < len(name) < 200:
-                    # Filter out noise
-                    if not any(noise.lower() in name.lower() for noise in noise_words):
+                if name_candidates:
+                    name = name_candidates[0][0]
+                    name = self._clean_product_name(name)
+                    
+                    if name and 3 < len(name) < 100:
                         category_ar, category_en = match_category(name)
                         
                         product = Product(
                             store=store,
-                            store_product_id=f"{store}_url_p{page_num}_{len(products)}_{int(time.time())}",
+                            store_product_id=f"{store}_p{page_num}_{len(products)}_{int(time.time())}",
                             name_ar=name,
                             name_en=name,
                             category_ar=category_ar,
@@ -478,25 +480,80 @@ class URLScraper:
                             scraped_at=datetime.utcnow()
                         )
                         products.append(product)
-                        print(f"    ✓ {name[:50]}... - {price} EGP")
+                        print(f"    ✓ {name[:40]}... - {price} EGP")
             
             i += 1
         
         return products
     
+    def _is_likely_product_name(self, text: str, product_keywords: List[str], noise_patterns: List[str]) -> bool:
+        """Check if text is likely a product name"""
+        # Must have some Arabic characters
+        if not re.search(r'[\u0600-\u06FF]', text):
+            return False
+        
+        # Skip if matches noise patterns
+        if any(re.search(pattern, text, re.IGNORECASE) for pattern in noise_patterns):
+            return False
+        
+        # Skip if it's just a number
+        if re.match(r'^[\d\s\.,]+$', text):
+            return False
+        
+        # Bonus if contains product keyword
+        has_keyword = any(kw in text for kw in product_keywords)
+        
+        # Must be reasonable length
+        if len(text) < 3 or len(text) > 100:
+            return False
+        
+        return True
+
+    def _clean_product_name(self, name: str) -> str:
+        """Clean product name from OCR artifacts"""
+        # Remove English letters mixed in
+        name = re.sub(r'[a-zA-Z]{1,3}(?=\s|$)', '', name)
+        # Remove excessive punctuation
+        name = re.sub(r'[;:,\.\*\+\-\|\[\]\(\)]+', ' ', name)
+        # Remove numbers at start/end
+        name = re.sub(r'^\d+\s*', '', name)
+        name = re.sub(r'\s*\d+$', '', name)
+        # Clean whitespace
+        name = ' '.join(name.split())
+        return name.strip()
+
     def _extract_price_enhanced(self, text: str) -> Optional[float]:
         """
-        Enhanced price extraction with better pattern matching for Egyptian prices
-        Handles: ج.م, جنيه, EGP, LE, etc.
+        Enhanced price extraction for Kazyon flyers
+        Handles standalone numbers and OCR artifacts
         """
         if not text:
             return None
         
-        # Price patterns specific to Egyptian currency
+        # Convert Arabic numerals to English
+        arabic_to_english = {
+            '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+            '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
+            '٫': '.', '،': ','
+        }
+        for ar, en in arabic_to_english.items():
+            text = text.replace(ar, en)
+        
+        # Clean OCR artifacts (semicolons become dots, random letters removed)
+        text = re.sub(r';', '.', text)  # ; -> .
+        text = re.sub(r'[a-zA-Z]+$', '', text)  # Remove trailing letters
+        text = re.sub(r'^[a-zA-Z]+', '', text)  # Remove leading letters
+        
+        # Price patterns - from most specific to least
         patterns = [
-            r'(\d+[\.,]?\d*)\s*(?:جنيه|ج\.م|جم)',  # Arabic
-            r'(\d+[\.,]?\d*)\s*(?:EGP|LE|egp|le)',  # English abbreviations
-            r'(\d+[\.,]?\d*)\s*(?:pound)',          # English word
+            # With currency suffix
+            r'(\d+[\.,]?\d*)\s*(?:جنيه|ج\.م|جم|EGP|LE)',
+            # Currency before number
+            r'(?:جنيه|ج\.م|جم|EGP|LE)\s*(\d+[\.,]?\d*)',
+            # Decimal prices (XX.XX or XXX.XX format - common for Egyptian prices)
+            r'\b(\d{2,3}\.\d{1,2})\b',
+            # Whole number prices (2-4 digits, typical grocery range)
+            r'\b(\d{2,4})\b(?!\s*(?:ديسمبر|يناير|فبراير|مارس|ابريل|مايو|يونيو|يوليو|اغسطس|سبتمبر|اكتوبر|نوفمبر))',
         ]
         
         for pattern in patterns:
@@ -505,8 +562,8 @@ class URLScraper:
                 price_str = match.group(1).replace(',', '.')
                 try:
                     price = float(price_str)
-                    # Validate range
-                    if 1.0 <= price <= 10000.0:
+                    # Validate range for Egyptian groceries (5-5000 EGP)
+                    if 5.0 <= price <= 5000.0:
                         return price
                 except ValueError:
                     continue

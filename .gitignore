@@ -64,3 +64,6 @@ frontend/.vite/
 # Temporary files
 *.tmp
 *.temp
+
+# Test files
+test_price_extraction.py
