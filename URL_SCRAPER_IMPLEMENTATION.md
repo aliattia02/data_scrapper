@@ -45,7 +45,7 @@ pip install -r requirements.txt
 
 Required new packages:
 - `img2pdf==0.5.0` - For converting images to PDF
-- `aiohttp==3.9.1` - For async HTTP requests (future use)
+- `aiohttp==3.9.4` - For async HTTP requests (patched for security vulnerabilities)
 
 ### 2. Install System Dependencies
 
@@ -190,6 +190,9 @@ frontend/
 
 ### Security Scan Results
 ✅ **No security vulnerabilities found** in CodeQL analysis for both Python and JavaScript code.
+✅ **All dependency vulnerabilities patched** - aiohttp updated to 3.9.4 to fix:
+  - CVE-2024-23334: Denial of Service vulnerability when parsing malformed POST requests
+  - Directory traversal vulnerability (< 3.9.2)
 
 ### Security Considerations
 - URL validation to prevent SSRF attacks
