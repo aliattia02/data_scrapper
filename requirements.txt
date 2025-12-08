@@ -5,7 +5,7 @@ selenium==4.15.2
 beautifulsoup4==4.12.2
 requests==2.31.0
 lxml==4.9.3
-aiohttp==3.9.1
+aiohttp==3.9.4
 
 # OCR
 pytesseract==0.3.10
