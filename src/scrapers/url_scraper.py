@@ -37,6 +37,9 @@ class URLScraper:
         'spinneys': 'spinneys'
     }
     
+    # Arabic month names pattern for filtering dates
+    MONTH_PATTERN = r'ديسمبر|يناير|فبراير|مارس|ابريل|مايو|يونيو|يوليو|اغسطس|سبتمبر|اكتوبر|نوفمبر|Nov|Dec'
+    
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
         self.session = requests.Session()
@@ -383,15 +386,15 @@ class URLScraper:
         """
         # Try configurations optimized for Arabic flyers
         configs = [
-            '--oem 1 --psm 6 -l ara+eng',   # LSTM + uniform block (best for structured flyers)
-            '--oem 1 --psm 11 -l ara+eng',  # LSTM + sparse text
-            '--oem 1 --psm 3 -l ara+eng',   # LSTM + auto
+            '--oem 1 --psm 6',   # LSTM + uniform block (best for structured flyers)
+            '--oem 1 --psm 11',  # LSTM + sparse text
+            '--oem 1 --psm 3',   # LSTM + auto
         ]
         
         texts = []
         for config in configs:
             try:
-                text = pytesseract.image_to_string(image, config=config)
+                text = pytesseract.image_to_string(image, lang='ara+eng', config=config)
                 texts.append(text)
             except:
                 continue
@@ -409,11 +412,10 @@ class URLScraper:
         # Noise patterns to filter
         noise_patterns = [
             r'www\.',  r'\.com', r'\.eg',
-            r'ديسمبر|يناير|فبراير|مارس',  # Months
+            self.MONTH_PATTERN,  # Months
             r'خميس|جمعة|سبت|احد|اثنين|ثلاثاء|اربعاء',  # Days
             r'حتى|من|الى',  # Date words
             r'kazyon|كازيون|ماركت|market|bim',  # Store names
-            r'نوفمبر|اكتوبر|Nov|Dec',
         ]
         
         # Arabic product keywords (indicates this is likely a product name)
@@ -467,7 +469,7 @@ class URLScraper:
                         
                         product = Product(
                             store=store,
-                            store_product_id=f"{store}_p{page_num}_{len(products)}_{int(time.time())}",
+                            store_product_id=f"{store}_url_p{page_num}_{len(products)}_{int(time.time())}",
                             name_ar=name,
                             name_en=name,
                             category_ar=category_ar,
@@ -499,9 +501,6 @@ class URLScraper:
         # Skip if it's just a number
         if re.match(r'^[\d\s\.,]+$', text):
             return False
-        
-        # Bonus if contains product keyword
-        has_keyword = any(kw in text for kw in product_keywords)
         
         # Must be reasonable length
         if len(text) < 3 or len(text) > 100:
@@ -553,7 +552,8 @@ class URLScraper:
             # Decimal prices (XX.XX or XXX.XX format - common for Egyptian prices)
             r'\b(\d{2,3}\.\d{1,2})\b',
             # Whole number prices (2-4 digits, typical grocery range)
-            r'\b(\d{2,4})\b(?!\s*(?:ديسمبر|يناير|فبراير|مارس|ابريل|مايو|يونيو|يوليو|اغسطس|سبتمبر|اكتوبر|نوفمبر))',
+            # Use class constant for month pattern to ensure consistency
+            rf'\b(\d{{2,4}})\b(?!\s*(?:{self.MONTH_PATTERN}))',
         ]
         
         for pattern in patterns:
