@@ -17,7 +17,7 @@ import re
 from src.database.models import ScrapeJob, Product
 from src.database.manager import DatabaseManager
 from src.utils.categories import match_category
-from src.utils.helpers import extract_price, clean_product_name
+from src.utils.helpers import extract_price
 from src.ocr.processor import OCRProcessor
 from src.ocr.image_preprocessor import ImagePreprocessor
 
@@ -539,7 +539,7 @@ class URLScraper:
             text = text.replace(ar, en)
         
         # Clean OCR artifacts (semicolons become dots, random letters removed)
-        text = re.sub(r';', '.', text)  # ; -> .
+        text = text.replace(';', '.')  # Simple replacement for better performance
         text = re.sub(r'[a-zA-Z]+$', '', text)  # Remove trailing letters
         text = re.sub(r'^[a-zA-Z]+', '', text)  # Remove leading letters
         
@@ -552,8 +552,8 @@ class URLScraper:
             # Decimal prices (XX.XX or XXX.XX format - common for Egyptian prices)
             r'\b(\d{2,3}\.\d{1,2})\b',
             # Whole number prices (2-4 digits, typical grocery range)
-            # Use class constant for month pattern to ensure consistency
-            rf'\b(\d{{2,4}})\b(?!\s*(?:{self.MONTH_PATTERN}))',
+            # Exclude month names using class constant
+            r'\b(\d{2,4})\b(?!\s*(?:' + self.MONTH_PATTERN + r'))',
         ]
         
         for pattern in patterns:
