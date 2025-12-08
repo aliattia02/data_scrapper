@@ -310,3 +310,51 @@ class ScrapingLog(Base):
             "completedAt": self.completed_at.isoformat() if self.completed_at else None,
             "durationSeconds": self.duration_seconds
         }
+
+
+class ScrapeJob(Base):
+    """ScrapeJob model - Track URL-based scraping jobs"""
+    __tablename__ = "scrape_jobs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_url = Column(String(1000), nullable=False)
+    store = Column(String(50), nullable=False, index=True)
+    status = Column(String(50), nullable=False, default='pending', index=True)
+    # Status values: pending, downloading, processing_ocr, completed, failed
+    
+    # Progress tracking
+    total_pages = Column(Integer, default=0)
+    pages_downloaded = Column(Integer, default=0)
+    pages_processed = Column(Integer, default=0)
+    products_found = Column(Integer, default=0)
+    
+    # File paths
+    pdf_path = Column(String(1000))
+    images_dir = Column(String(1000))
+    
+    # Error tracking
+    errors = Column(Text)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+    duration_seconds = Column(Float)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "sourceUrl": self.source_url,
+            "store": self.store,
+            "status": self.status,
+            "totalPages": self.total_pages,
+            "pagesDownloaded": self.pages_downloaded,
+            "pagesProcessed": self.pages_processed,
+            "productsFound": self.products_found,
+            "pdfPath": self.pdf_path,
+            "errors": self.errors,
+            "createdAt": self.created_at.isoformat() if self.created_at else None,
+            "startedAt": self.started_at.isoformat() if self.started_at else None,
+            "completedAt": self.completed_at.isoformat() if self.completed_at else None,
+            "durationSeconds": self.duration_seconds
+        }

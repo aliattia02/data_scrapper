@@ -39,6 +39,10 @@ data/exports/*.csv
 data/flyers/*.jpg
 data/flyers/*.png
 data/flyers/*.pdf
+data/flyers/*.txt
+data/pdfs/*.pdf
+data/catalogue_images/
+data/catalogue_images/**/*
 
 # Logs
 *.log
