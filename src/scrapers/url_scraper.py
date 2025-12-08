@@ -520,13 +520,18 @@ class URLScraper:
         This is more targeted than the generic clean_product_name helper
         and preserves important product information like sizes/quantities
         """
-        # Remove English letters mixed in (OCR artifacts)
-        name = re.sub(r'[a-zA-Z]{1,3}(?=\s|$)', '', name)
-        # Remove excessive punctuation
+        # Remove short English letter sequences (1-3 letters) at word boundaries
+        # These are typically OCR artifacts like "fe", "E", "uw"
+        name = re.sub(r'\b[a-zA-Z]{1,3}\b', '', name)
+        
+        # Remove excessive punctuation (but keep forward slash for items like "صدور/مشكل")
         name = re.sub(r'[;:,\.\*\+\-\|\[\]\(\)]+', ' ', name)
-        # Remove numbers at start/end (but preserve in middle for sizes like "2 كجم")
-        name = re.sub(r'^\d+\s*', '', name)
-        name = re.sub(r'\s*\d+$', '', name)
+        
+        # Remove standalone numbers at start/end that are likely page numbers or noise
+        # But preserve numbers in the middle (like "2 كجم")
+        name = re.sub(r'^\d+\s+', '', name)  # Remove leading numbers
+        name = re.sub(r'\s+\d+$', '', name)  # Remove trailing numbers
+        
         # Clean whitespace
         name = ' '.join(name.split())
         return name.strip()
