@@ -260,13 +260,29 @@ async def scrape_pdf(request: dict, db: Session = Depends(get_db)):
         scraper = PdfScraper()
         result = scraper.scrape_single_catalogue(url, metadata)
         
+        # Parse dates with validation
+        valid_from = None
+        valid_until = None
+        
+        if request.get('start_date'):
+            try:
+                valid_from = datetime.fromisoformat(request['start_date'])
+            except (ValueError, TypeError) as e:
+                raise HTTPException(status_code=400, detail=f"Invalid start_date format: {str(e)}")
+        
+        if request.get('end_date'):
+            try:
+                valid_until = datetime.fromisoformat(request['end_date'])
+            except (ValueError, TypeError) as e:
+                raise HTTPException(status_code=400, detail=f"Invalid end_date format: {str(e)}")
+        
         # Save to database
         catalogue = Catalogue(
             store_id=None,  # Can be linked later
             market_category=metadata['market_category'],
             market_name=metadata['market_name'],
-            valid_from=datetime.fromisoformat(request.get('start_date')) if request.get('start_date') else None,
-            valid_until=datetime.fromisoformat(request.get('end_date')) if request.get('end_date') else None,
+            valid_from=valid_from,
+            valid_until=valid_until,
             latitude=request.get('latitude'),
             longitude=request.get('longitude'),
             file_path=result['pdf_path'],
@@ -339,14 +355,14 @@ async def scrape_store_catalogues(request: dict, db: Session = Depends(get_db)):
             if result.get('start_date'):
                 try:
                     valid_from = datetime.fromisoformat(result['start_date'])
-                except:
-                    pass
+                except (ValueError, TypeError) as e:
+                    print(f"Invalid start_date format: {result.get('start_date')}")
             
             if result.get('end_date'):
                 try:
                     valid_until = datetime.fromisoformat(result['end_date'])
-                except:
-                    pass
+                except (ValueError, TypeError) as e:
+                    print(f"Invalid end_date format: {result.get('end_date')}")
             
             catalogue = Catalogue(
                 store_id=None,

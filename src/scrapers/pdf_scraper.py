@@ -90,8 +90,8 @@ class PdfScraper:
             for img in images:
                 try:
                     img.unlink()
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Warning: Failed to delete temp file {img}: {e}")
             
             print(f"✅ PDF created: {pdf_path.name} ({file_size / 1024:.1f} KB)")
             
@@ -299,7 +299,7 @@ class PdfScraper:
             print(f"Error merging to PDF: {e}")
             raise
     
-    def _generate_thumbnail(self, first_image: Path, filename: str) -> Path:
+    def _generate_thumbnail(self, first_image: Path, filename: str) -> Optional[Path]:
         """
         Generate thumbnail from first page
         
@@ -308,7 +308,7 @@ class PdfScraper:
             filename: Base filename (will create thumbnail with same base)
         
         Returns:
-            Path to thumbnail
+            Path to thumbnail or None if generation fails
         """
         try:
             # Remove .pdf extension and add _thumb.jpg
@@ -332,7 +332,8 @@ class PdfScraper:
             return thumb_path
             
         except Exception as e:
-            print(f"Error generating thumbnail: {e}")
+            import logging
+            logging.error(f"Error generating thumbnail: {e}")
             return None
     
     def _generate_filename(self, metadata: dict) -> str:

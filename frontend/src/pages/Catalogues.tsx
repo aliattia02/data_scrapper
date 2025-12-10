@@ -154,7 +154,7 @@ export default function Catalogues() {
                   <div className="flex items-center gap-1 text-sm text-gray-600 mb-3">
                     <MapPin className="w-4 h-4" />
                     <span>
-                      {catalogue.latitude.toFixed(4)}, {catalogue.longitude.toFixed(4)}
+                      {Number(catalogue.latitude).toFixed(4)}, {Number(catalogue.longitude).toFixed(4)}
                     </span>
                   </div>
                 )}
