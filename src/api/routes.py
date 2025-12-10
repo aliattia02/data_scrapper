@@ -2,6 +2,7 @@
 src/api/routes.py - FastAPI Routes for Admin Dashboard
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -221,6 +222,313 @@ async def process_catalogue(catalogue_id: int, db: Session = Depends(get_db)):
         catalogue.status = 'failed'
         db.commit()
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
+
+# PDF Scraper endpoints
+@catalogues_router.post("/scrape-pdf")
+async def scrape_pdf(request: dict, db: Session = Depends(get_db)):
+    """
+    Scrape catalogue images and merge into PDF
+    
+    Request body:
+    {
+        "url": "https://...",
+        "market_category": "supermarket",
+        "market_name": "Metro",
+        "start_date": "2024-12-01",
+        "end_date": "2024-12-08",
+        "latitude": 30.0444,
+        "longitude": 31.2357
+    }
+    
+    Returns: { "pdf_path": "...", "filename": "...", "pages": 7 }
+    """
+    try:
+        from src.scrapers.pdf_scraper import PdfScraper
+        
+        url = request.get('url')
+        if not url:
+            raise HTTPException(status_code=400, detail="URL is required")
+        
+        metadata = {
+            'market_category': request.get('market_category', 'catalogue'),
+            'market_name': request.get('market_name', 'store'),
+            'start_date': request.get('start_date', ''),
+            'end_date': request.get('end_date', ''),
+        }
+        
+        scraper = PdfScraper()
+        result = scraper.scrape_single_catalogue(url, metadata)
+        
+        # Parse dates with validation
+        valid_from = None
+        valid_until = None
+        
+        if request.get('start_date'):
+            try:
+                valid_from = datetime.fromisoformat(request['start_date'])
+            except (ValueError, TypeError) as e:
+                raise HTTPException(status_code=400, detail=f"Invalid start_date format: {str(e)}")
+        
+        if request.get('end_date'):
+            try:
+                valid_until = datetime.fromisoformat(request['end_date'])
+            except (ValueError, TypeError) as e:
+                raise HTTPException(status_code=400, detail=f"Invalid end_date format: {str(e)}")
+        
+        # Save to database
+        catalogue = Catalogue(
+            store_id=None,  # Can be linked later
+            market_category=metadata['market_category'],
+            market_name=metadata['market_name'],
+            valid_from=valid_from,
+            valid_until=valid_until,
+            latitude=request.get('latitude'),
+            longitude=request.get('longitude'),
+            file_path=result['pdf_path'],
+            original_filename=result['filename'],
+            file_type='pdf',
+            page_count=result['pages'],
+            file_size=result['file_size'],
+            source_url=url,
+            thumbnail_path=result.get('thumbnail_path'),
+            status='completed'
+        )
+        
+        db.add(catalogue)
+        db.commit()
+        db.refresh(catalogue)
+        
+        return {
+            "success": True,
+            "catalogue_id": catalogue.id,
+            "pdf_path": result['pdf_path'],
+            "filename": result['filename'],
+            "pages": result['pages'],
+            "file_size": result['file_size']
+        }
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"PDF scraping failed: {str(e)}\n{error_detail}")
+
+
+@catalogues_router.post("/scrape-store-catalogues")
+async def scrape_store_catalogues(request: dict, db: Session = Depends(get_db)):
+    """
+    Scrape all catalogue links from a store page
+    
+    Request body:
+    {
+        "store_url": "https://www.filloffer.com/markets/Metro-Markets",
+        "market_category": "supermarket",
+        "market_name": "Metro",
+        "latitude": 30.0444,
+        "longitude": 31.2357
+    }
+    
+    Returns: { "catalogues": [...], "total": 5 }
+    """
+    try:
+        from src.scrapers.pdf_scraper import PdfScraper
+        
+        store_url = request.get('store_url')
+        if not store_url:
+            raise HTTPException(status_code=400, detail="Store URL is required")
+        
+        metadata = {
+            'market_category': request.get('market_category', 'catalogue'),
+            'market_name': request.get('market_name', 'store'),
+        }
+        
+        scraper = PdfScraper()
+        results = scraper.scrape_store_catalogues(store_url, metadata)
+        
+        # Save all to database
+        catalogues = []
+        for result in results:
+            # Parse dates if available
+            valid_from = None
+            valid_until = None
+            
+            if result.get('start_date'):
+                try:
+                    valid_from = datetime.fromisoformat(result['start_date'])
+                except (ValueError, TypeError) as e:
+                    print(f"Invalid start_date format: {result.get('start_date')}")
+            
+            if result.get('end_date'):
+                try:
+                    valid_until = datetime.fromisoformat(result['end_date'])
+                except (ValueError, TypeError) as e:
+                    print(f"Invalid end_date format: {result.get('end_date')}")
+            
+            catalogue = Catalogue(
+                store_id=None,
+                market_category=metadata['market_category'],
+                market_name=metadata['market_name'],
+                title_en=result.get('title', ''),
+                valid_from=valid_from,
+                valid_until=valid_until,
+                latitude=request.get('latitude'),
+                longitude=request.get('longitude'),
+                file_path=result['pdf_path'],
+                original_filename=result['filename'],
+                file_type='pdf',
+                page_count=result['pages'],
+                file_size=result['file_size'],
+                source_url=result.get('url', store_url),
+                thumbnail_path=result.get('thumbnail_path'),
+                status='completed'
+            )
+            
+            db.add(catalogue)
+            catalogues.append(catalogue)
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "catalogues": [cat.to_dict() for cat in catalogues],
+            "total": len(catalogues)
+        }
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Store scraping failed: {str(e)}\n{error_detail}")
+
+
+@catalogues_router.get("/list")
+async def list_catalogues_filtered(
+    store: Optional[str] = None,
+    category: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """List all catalogues with optional filters"""
+    query = db.query(Catalogue)
+    
+    if store:
+        query = query.filter(Catalogue.market_name == store)
+    
+    if category:
+        query = query.filter(Catalogue.market_category == category)
+    
+    if from_date:
+        query = query.filter(Catalogue.valid_from >= datetime.fromisoformat(from_date))
+    
+    if to_date:
+        query = query.filter(Catalogue.valid_until <= datetime.fromisoformat(to_date))
+    
+    catalogues = query.order_by(Catalogue.created_at.desc()).all()
+    return [cat.to_dict() for cat in catalogues]
+
+
+@catalogues_router.put("/{catalogue_id}/rename")
+async def rename_catalogue(catalogue_id: int, request: dict, db: Session = Depends(get_db)):
+    """Rename catalogue PDF file"""
+    catalogue = db.query(Catalogue).filter(Catalogue.id == catalogue_id).first()
+    if not catalogue:
+        raise HTTPException(status_code=404, detail="Catalogue not found")
+    
+    new_name = request.get('new_name')
+    if not new_name:
+        raise HTTPException(status_code=400, detail="new_name is required")
+    
+    # Ensure .pdf extension
+    if not new_name.endswith('.pdf'):
+        new_name = f"{new_name}.pdf"
+    
+    # Rename file on disk
+    try:
+        from pathlib import Path
+        
+        old_path = Path(catalogue.file_path)
+        new_path = old_path.parent / new_name
+        
+        if old_path.exists():
+            old_path.rename(new_path)
+            catalogue.file_path = str(new_path)
+            catalogue.original_filename = new_name
+            
+            # Also rename thumbnail if exists
+            if catalogue.thumbnail_path:
+                old_thumb = Path(catalogue.thumbnail_path)
+                new_thumb_name = new_name.replace('.pdf', '_thumb.jpg')
+                new_thumb = old_thumb.parent / new_thumb_name
+                
+                if old_thumb.exists():
+                    old_thumb.rename(new_thumb)
+                    catalogue.thumbnail_path = str(new_thumb)
+        
+        db.commit()
+        
+        return {"success": True, "new_name": new_name}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rename failed: {str(e)}")
+
+
+@catalogues_router.get("/{catalogue_id}/pdf")
+async def get_catalogue_pdf(catalogue_id: int, db: Session = Depends(get_db)):
+    """Return PDF file for download/viewing"""
+    catalogue = db.query(Catalogue).filter(Catalogue.id == catalogue_id).first()
+    if not catalogue:
+        raise HTTPException(status_code=404, detail="Catalogue not found")
+    
+    if not catalogue.file_path or not os.path.exists(catalogue.file_path):
+        raise HTTPException(status_code=404, detail="PDF file not found")
+    
+    return FileResponse(
+        catalogue.file_path,
+        media_type='application/pdf',
+        filename=catalogue.original_filename or 'catalogue.pdf'
+    )
+
+
+@catalogues_router.get("/{catalogue_id}/thumbnail")
+async def get_catalogue_thumbnail(catalogue_id: int, db: Session = Depends(get_db)):
+    """Return first page as thumbnail image"""
+    catalogue = db.query(Catalogue).filter(Catalogue.id == catalogue_id).first()
+    if not catalogue:
+        raise HTTPException(status_code=404, detail="Catalogue not found")
+    
+    if not catalogue.thumbnail_path or not os.path.exists(catalogue.thumbnail_path):
+        raise HTTPException(status_code=404, detail="Thumbnail not found")
+    
+    return FileResponse(
+        catalogue.thumbnail_path,
+        media_type='image/jpeg'
+    )
+
+
+@catalogues_router.delete("/{catalogue_id}")
+async def delete_catalogue(catalogue_id: int, db: Session = Depends(get_db)):
+    """Delete catalogue and PDF file"""
+    catalogue = db.query(Catalogue).filter(Catalogue.id == catalogue_id).first()
+    if not catalogue:
+        raise HTTPException(status_code=404, detail="Catalogue not found")
+    
+    # Delete files from disk
+    try:
+        from pathlib import Path
+        
+        if catalogue.file_path and os.path.exists(catalogue.file_path):
+            Path(catalogue.file_path).unlink()
+        
+        if catalogue.thumbnail_path and os.path.exists(catalogue.thumbnail_path):
+            Path(catalogue.thumbnail_path).unlink()
+    except Exception as e:
+        print(f"Warning: Failed to delete files: {e}")
+    
+    # Delete from database
+    db.delete(catalogue)
+    db.commit()
+    
+    return {"success": True, "message": "Catalogue deleted"}
 
 
 # Export endpoint

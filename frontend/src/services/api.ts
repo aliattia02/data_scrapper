@@ -40,6 +40,47 @@ export const uploadCatalogueFile = (catalogueId: number, file: File) => {
 export const processCatalogue = (catalogueId: number) =>
   api.post(`/api/v1/catalogues/${catalogueId}/process`)
 
+// PDF Scraper
+export const scrapeCataloguePdf = async (data: {
+  url: string
+  market_category: string
+  market_name: string
+  start_date: string
+  end_date: string
+  latitude?: number
+  longitude?: number
+}) => api.post('/api/v1/catalogues/scrape-pdf', data)
+
+export const scrapeStoreCatalogues = async (data: {
+  store_url: string
+  market_category: string
+  market_name: string
+  latitude?: number
+  longitude?: number
+}) => api.post('/api/v1/catalogues/scrape-store-catalogues', data)
+
+export const listCatalogues = async (filters?: {
+  store?: string
+  category?: string
+  from_date?: string
+  to_date?: string
+}) => {
+  const params = new URLSearchParams(filters as any)
+  return api.get('/api/v1/catalogues/list?' + params.toString())
+}
+
+export const renameCatalogue = async (id: number, newName: string) =>
+  api.put(`/api/v1/catalogues/${id}/rename`, { new_name: newName })
+
+export const deleteCatalogue = async (id: number) =>
+  api.delete(`/api/v1/catalogues/${id}`)
+
+export const getCataloguePdfUrl = (id: number) => 
+  `${API_BASE_URL}/api/v1/catalogues/${id}/pdf`
+
+export const getCatalogueThumbnailUrl = (id: number) =>
+  `${API_BASE_URL}/api/v1/catalogues/${id}/thumbnail`
+
 // Export
 export const exportData = () => api.get('/api/v1/export/app')
 

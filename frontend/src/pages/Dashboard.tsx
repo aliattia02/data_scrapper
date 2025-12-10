@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getStats, getProducts, getStores } from '../services/api'
+import { getStats } from '../services/api'
 import { Package, Store, Tag, TrendingUp } from 'lucide-react'
 
 export default function Dashboard() {
