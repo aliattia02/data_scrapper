@@ -1,10 +1,11 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
-import { Package, Store, Tag, FileText, Upload, Download, Play } from 'lucide-react'
+import { Package, Store, Tag, FileText, Upload, Download, Play, FilePlus } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import Stores from './pages/Stores'
 import Categories from './pages/Categories'
 import Products from './pages/Products'
 import Catalogues from './pages/Catalogues'
+import PdfScraper from './pages/PdfScraper'
 import Export from './pages/Export'
 import Scrapers from './pages/Scrapers'
 
@@ -27,6 +28,7 @@ function App() {
                   <NavLink to="/categories" icon={<Tag />}>Categories</NavLink>
                   <NavLink to="/products" icon={<Package />}>Products</NavLink>
                   <NavLink to="/catalogues" icon={<FileText />}>Catalogues</NavLink>
+                  <NavLink to="/pdf-scraper" icon={<FilePlus />}>PDF Scraper</NavLink>
                   <NavLink to="/export" icon={<Download />}>Export</NavLink>
                   <NavLink to="/scrapers" icon={<Play />}>Scrapers</NavLink>
                 </div>
@@ -42,6 +44,7 @@ function App() {
             <Route path="/categories" element={<Categories />} />
             <Route path="/products" element={<Products />} />
             <Route path="/catalogues" element={<Catalogues />} />
+            <Route path="/pdf-scraper" element={<PdfScraper />} />
             <Route path="/export" element={<Export />} />
             <Route path="/scrapers" element={<Scrapers />} />
           </Routes>

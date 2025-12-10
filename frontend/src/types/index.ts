@@ -53,15 +53,24 @@ export interface Product {
 
 export interface Catalogue {
   id: number
-  storeId: string
+  storeId?: string
+  marketCategory?: string
+  marketName?: string
   titleAr?: string
   titleEn?: string
   validFrom?: string
   validUntil?: string
+  latitude?: number
+  longitude?: number
   status: string
   ocrProcessed: boolean
+  filePath?: string
+  originalFilename?: string
   fileType?: string
   pageCount: number
+  fileSize?: number
+  sourceUrl?: string
+  thumbnailPath?: string
   offerCount: number
   createdAt?: string
   processedAt?: string

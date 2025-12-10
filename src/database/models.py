@@ -221,20 +221,44 @@ class Catalogue(Base):
     __tablename__ = "catalogues"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True)
+    
+    # Naming fields
+    market_category = Column(String(100))  # supermarket, hypermarket, grocery, etc.
+    market_name = Column(String(200))
+    
     title_ar = Column(String(500))
     title_en = Column(String(500))
+    
+    # Date range
     valid_from = Column(DateTime)
     valid_until = Column(DateTime)
+    
+    # Location
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    
+    # File info
+    file_path = Column(String(1000))
+    original_filename = Column(String(500))
+    file_type = Column(String(20))  # pdf, images
+    page_count = Column(Integer, default=0)
+    file_size = Column(Integer)  # bytes
+    
+    # Source
+    source_url = Column(String(1000))
+    
+    # Status
     status = Column(String(50), default="pending")
     ocr_processed = Column(Boolean, default=False)
-    file_path = Column(String(1000))
-    file_type = Column(String(20))
-    page_count = Column(Integer, default=0)
-    source_url = Column(String(1000))  # ADD THIS LINE
+    
+    # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     processed_at = Column(DateTime)
+    
+    # Thumbnail
+    thumbnail_path = Column(String(1000), nullable=True)
 
     store = relationship("Store", back_populates="catalogues")
     pages = relationship("CataloguePage", back_populates="catalogue", cascade="all, delete-orphan")
@@ -244,14 +268,23 @@ class Catalogue(Base):
         return {
             "id": self.id,
             "storeId": self.store.store_id if self.store else None,
+            "marketCategory": self.market_category,
+            "marketName": self.market_name,
             "titleAr": self.title_ar,
             "titleEn": self.title_en,
             "validFrom": self.valid_from.isoformat() if self.valid_from else None,
             "validUntil": self.valid_until.isoformat() if self.valid_until else None,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
             "status": self.status,
             "ocrProcessed": self.ocr_processed,
+            "filePath": self.file_path,
+            "originalFilename": self.original_filename,
             "fileType": self.file_type,
             "pageCount": self.page_count,
+            "fileSize": self.file_size,
+            "sourceUrl": self.source_url,
+            "thumbnailPath": self.thumbnail_path,
             "offerCount": len(self.offers) if self.offers else 0,
             "createdAt": self.created_at.isoformat() if self.created_at else None,
             "processedAt": self.processed_at.isoformat() if self.processed_at else None
