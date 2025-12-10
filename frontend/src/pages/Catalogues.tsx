@@ -32,8 +32,8 @@ export default function Catalogues() {
   })
 
   // Get unique stores and categories for filters
-  const uniqueStores = [...new Set(catalogues?.map((c: Catalogue) => c.marketName).filter(Boolean))]
-  const uniqueCategories = [...new Set(catalogues?.map((c: Catalogue) => c.marketCategory).filter(Boolean))]
+  const uniqueStores = [...new Set(catalogues?.map((c: Catalogue) => c.marketName).filter(Boolean))] as string[]
+  const uniqueCategories = [...new Set(catalogues?.map((c: Catalogue) => c.marketCategory).filter(Boolean))] as string[]
 
   if (isLoading) {
     return <div className="text-center py-12">Loading catalogues...</div>

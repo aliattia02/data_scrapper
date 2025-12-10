@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
-import { Package, Store, Tag, FileText, Upload, Download, Play, FilePlus } from 'lucide-react'
+import { Package, Store, Tag, FileText, Download, Play, FilePlus } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import Stores from './pages/Stores'
 import Categories from './pages/Categories'
